@@ -1,9 +1,9 @@
 use agent_client_protocol::{
     Agent, ClientCapabilities, ClientSideConnection, ContentBlock, Implementation,
-    InitializeRequest, NewSessionRequest, PermissionOptionId, ProtocolVersion,
-    RequestPermissionOutcome, SelectedPermissionOutcome, SessionConfigId, SessionConfigKind,
-    SessionConfigOption, SessionConfigSelectOptions, SessionConfigValueId, SessionId,
-    SetSessionConfigOptionRequest, TextContent,
+    InitializeRequest, McpServer, McpServerStdio, NewSessionRequest, PermissionOptionId,
+    ProtocolVersion, RequestPermissionOutcome, SelectedPermissionOutcome, SessionConfigId,
+    SessionConfigKind, SessionConfigOption, SessionConfigSelectOptions, SessionConfigValueId,
+    SessionId, SetSessionConfigOptionRequest, TextContent,
 };
 use golaunch_core::{
     CommandHistory, CommandSuggestion, Conversation, ConversationMessage, Item, Memory,
@@ -185,9 +185,16 @@ impl AcpManager {
                     return;
                 }
 
-                // Create a new session
+                // Create a new session with the GoLaunch MCP server
                 let cwd = std::env::current_dir().unwrap_or_else(|_| "/".into());
-                let session_result = connection.new_session(NewSessionRequest::new(cwd)).await;
+                let mcp_binary = resolve_mcp_binary_path();
+                let mcp_server =
+                    McpServer::Stdio(McpServerStdio::new("golaunch", &mcp_binary));
+                let session_result = connection
+                    .new_session(
+                        NewSessionRequest::new(cwd).mcp_servers(vec![mcp_server]),
+                    )
+                    .await;
 
                 let (session_id, initial_config_options) = match session_result {
                     Ok(resp) => {
@@ -240,6 +247,17 @@ impl AcpManager {
                                         session_id, content,
                                     ))
                                     .await;
+
+                                // Yield several times to let any pending
+                                // spawn_local notification tasks (message
+                                // chunks) flush before we emit TurnComplete.
+                                // The ACP RPC layer spawns each notification
+                                // handler as a separate local task, so the
+                                // prompt response can resolve before the last
+                                // message-chunk tasks have run.
+                                for _ in 0..3 {
+                                    tokio::task::yield_now().await;
+                                }
 
                                 match result {
                                     Ok(resp) => {
@@ -576,6 +594,31 @@ fn resolve_binary_path(binary: &str, agent_id: &str) -> String {
     binary.to_string()
 }
 
+/// Resolve the path to the `golaunch-mcp` binary.
+///
+/// During development both `golaunch-app` and `golaunch-mcp` are compiled to the
+/// same `target/{debug,release}` directory, so we look next to the current exe first.
+fn resolve_mcp_binary_path() -> std::path::PathBuf {
+    let bin_name = if cfg!(target_os = "windows") {
+        "golaunch-mcp.exe"
+    } else {
+        "golaunch-mcp"
+    };
+
+    // Check next to the current executable (works for both dev and bundled)
+    if let Ok(exe) = std::env::current_exe() {
+        if let Some(dir) = exe.parent() {
+            let candidate = dir.join(bin_name);
+            if candidate.exists() {
+                return candidate;
+            }
+        }
+    }
+
+    // Fallback: assume it's on PATH
+    std::path::PathBuf::from(bin_name)
+}
+
 /// Build a focused prompt for the slash command creation agent.
 /// This agent's sole purpose is to collaborate with the user to create a script,
 /// register it as a slash command, and execute it.
@@ -598,16 +641,18 @@ fn build_slash_command_prompt(
          Your ONLY job:\n\
          1. Figure out what the script should do based on the command name and arguments.\n\
             For example: `/kill 4924` → a script that kills the process running on port 4924.\n\
-         2. Briefly confirm with the user what the script will do.\n\
-         3. Write the script file to the slash-commands directory.\n\
-         4. Register it using the `slash_commands_add` MCP tool.\n\
-         5. Execute it immediately using the `slash_commands_run` MCP tool.\n\n\
+         2. In ONE short sentence, say what you'll create. Then IMMEDIATELY call `slash_commands_add`.\n\
+         3. Call `slash_commands_run` to execute it.\n\
+         4. Briefly confirm what happened. STOP — do not do anything else.\n\n\
          Guidelines:\n\
          - Be smart about inferring the purpose from the command name — the user expects you to understand.\n\
          - Be concise — the user is in a launcher and wants quick results.\n\
          - Make scripts robust: validate arguments, handle errors, produce clear output.\n\
          - If the purpose is ambiguous, ask ONE clarifying question, then proceed.\n\
-         - After creating and executing, briefly confirm what happened.\n\n",
+         - After creating and executing, briefly confirm what happened.\n\
+         - ONLY use the GoLaunch MCP tools listed below. Do NOT use Bash, Read, Glob, Grep, \
+           Write, Edit, or any other filesystem tools. Do NOT explore the codebase or look for \
+           configuration files. You already have everything you need.\n\n",
     );
 
     // ── Platform info ──
@@ -636,14 +681,13 @@ fn build_slash_command_prompt(
         "## GoLaunch MCP Tools\n\
          Script storage directory: `{slash_dir}`\n\n\
          Available slash command tools:\n\
-         - `slash_commands_add` — Register a new slash command (name, description, script_path)\n\
+         - `slash_commands_add` — Create a new slash command (name, description, script_content). Writes the script file automatically.\n\
          - `slash_commands_get` — Get a slash command by name\n\
          - `slash_commands_list` — List all registered slash commands\n\
          - `slash_commands_search` — Search slash commands by name or description\n\
          - `slash_commands_remove` — Remove a slash command by name\n\
          - `slash_commands_run` — Execute a slash command by name with optional args\n\n\
-         Workflow: first write the script file to disk, then register with `slash_commands_add`, \
-         then execute with `slash_commands_run`.\n\n"
+         Workflow: call `slash_commands_add` with the script contents, then execute with `slash_commands_run`.\n\n"
     ));
 
     // ── User memory / preferences ──

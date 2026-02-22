@@ -1,4 +1,4 @@
-import { useEffect } from "react";
+import { useEffect, useState } from "react";
 import type { PermissionRequest } from "../types";
 
 interface PermissionDialogProps {
@@ -38,19 +38,39 @@ export function PermissionDialog({ request, onResolve }: PermissionDialogProps) 
     return () => window.removeEventListener("keydown", handleKeyDown);
   }, [request, onResolve, yesOption, noOption]);
 
+  const hasDescription = !!request.command_preview;
+  const [commandExpanded, setCommandExpanded] = useState(false);
+
   return (
-    <div className="permission-dialog">
-      <div className="permission-header">
-        <span className="permission-title">{request.tool_name}</span>
-        <span className="permission-status-badge permission-status-pending">PENDING</span>
-      </div>
-      {request.command_preview && (
-        <div className="permission-command-preview">
-          {request.command_preview}
+    <div data-testid="permission-dialog" className="permission-dialog">
+      {hasDescription ? (
+        <>
+          <div className="permission-header">
+            <span className="permission-title">{request.command_preview}</span>
+            <span className="permission-status-badge permission-status-pending">PENDING</span>
+          </div>
+          <div
+            className="permission-command-expandable"
+            onClick={() => setCommandExpanded(!commandExpanded)}
+          >
+            <span className={`permission-expand-arrow ${commandExpanded ? "expanded" : ""}`}>&#9654;</span>
+            <span className="permission-command-label">{request.tool_name}</span>
+          </div>
+          {commandExpanded && (
+            <div className="permission-command-preview">
+              {request.tool_name}
+            </div>
+          )}
+        </>
+      ) : (
+        <div className="permission-header">
+          <span className="permission-title">{request.tool_name}</span>
+          <span className="permission-status-badge permission-status-pending">PENDING</span>
         </div>
       )}
       <div className="permission-actions">
         <button
+          data-testid="permission-approve"
           className="permission-btn permission-btn-approve"
           onClick={() =>
             yesOption && onResolve(request.request_id, yesOption.option_id)
@@ -60,6 +80,7 @@ export function PermissionDialog({ request, onResolve }: PermissionDialogProps) 
           Yes
         </button>
         <button
+          data-testid="permission-deny"
           className="permission-btn permission-btn-deny"
           onClick={() => noOption && onResolve(request.request_id, noOption.option_id)}
           disabled={!noOption}

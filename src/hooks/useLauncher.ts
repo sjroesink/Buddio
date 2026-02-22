@@ -9,6 +9,9 @@ interface UseLauncherOptions {
   onSlashCommandCreate: (query: string) => void;
   onAgentCancel: () => void;
   agentTurnActive: boolean;
+  hasSelectedText?: boolean;
+  onExecuteSuccess?: () => void;
+  onExecuteError?: (error: string) => void;
 }
 
 export function useLauncher(options: UseLauncherOptions) {
@@ -57,10 +60,24 @@ export function useLauncher(options: UseLauncherOptions) {
     }
   }, []);
 
+  // Compute categories with "Selection" first if text is selected
+  const displayCategories = options.hasSelectedText && categories.includes("Selection")
+    ? ["Selection", ...categories.filter(c => c !== "Selection")]
+    : categories;
+
   useEffect(() => {
     fetchItems("");
     fetchCategories();
   }, [fetchItems, fetchCategories]);
+
+  // Auto-select "Selection" category when text is selected
+  useEffect(() => {
+    if (options.hasSelectedText && categories.includes("Selection")) {
+      setActiveCategory("Selection");
+    } else if (!options.hasSelectedText && activeCategory === "Selection") {
+      setActiveCategory(null);
+    }
+  }, [options.hasSelectedText, categories]);
 
   useEffect(() => {
     if (debounceRef.current) clearTimeout(debounceRef.current);
@@ -136,9 +153,18 @@ export function useLauncher(options: UseLauncherOptions) {
     [options],
   );
 
-  const filteredItems = activeCategory
+  // Filter items and sort so Selection items appear first when text is selected
+  let filteredItems = activeCategory
     ? items.filter((item) => item.category === activeCategory)
     : items;
+
+  // When text is selected, show Selection items first
+  if (options.hasSelectedText && !activeCategory) {
+    filteredItems = [
+      ...filteredItems.filter((item) => item.category === "Selection"),
+      ...filteredItems.filter((item) => item.category !== "Selection"),
+    ];
+  }
 
   // Agent mode conditions met (used internally — UI doesn't switch until Enter)
   const agentModeReady =
@@ -248,11 +274,12 @@ export function useLauncher(options: UseLauncherOptions) {
     if (!item) return;
     try {
       await invoke("execute_item", { id: item.id });
-      await invoke("hide_window");
+      options.onExecuteSuccess?.();
     } catch (err) {
       console.error("Failed to execute item:", err);
+      options.onExecuteError?.(String(err));
     }
-  }, [filteredItems, selectedIndex]);
+  }, [filteredItems, selectedIndex, options]);
 
   const handleKeyDown = useCallback(
     (e: React.KeyboardEvent) => {
@@ -445,7 +472,7 @@ export function useLauncher(options: UseLauncherOptions) {
     items: filteredItems,
     selectedIndex,
     setSelectedIndex,
-    categories,
+    categories: displayCategories,
     activeCategory,
     setActiveCategory,
     loading,

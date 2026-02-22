@@ -28,6 +28,7 @@ zip = "2"
 dirs = "6"
 enigo = { version = "0.2", features = ["serde"] }
 arboard = "3"
+urlencoding = "2"
 
 [target.'cfg(windows)'.dependencies]
 windows = { version = "0.61", features = [

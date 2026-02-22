@@ -183,8 +183,9 @@ pub struct SlashCommandAddParams {
     /// Description of what the command does
     #[serde(default)]
     pub description: String,
-    /// Path to the script file
-    pub script_path: String,
+    /// The script contents (PowerShell on Windows, shell on other platforms).
+    /// The file will be written automatically to the slash-commands directory.
+    pub script_content: String,
 }
 
 #[derive(Debug, Deserialize, schemars::JsonSchema)]
@@ -733,17 +734,37 @@ impl GoLaunchMcp {
 
     // ── Slash Commands (7) ──────────────────────────────────────────────
 
-    #[tool(description = "Register a new slash command with a name, description, and script path")]
+    #[tool(
+        description = "Create a new slash command by providing the script contents directly. The script file is written to disk automatically."
+    )]
     fn slash_commands_add(
         &self,
         Parameters(p): Parameters<SlashCommandAddParams>,
     ) -> Result<CallToolResult, McpError> {
+        let dir = Database::slash_commands_dir().map_err(|e| {
+            McpError::internal_error(format!("Failed to resolve slash-commands dir: {e}"), None)
+        })?;
+        std::fs::create_dir_all(&dir).map_err(|e| {
+            McpError::internal_error(format!("Failed to create slash-commands dir: {e}"), None)
+        })?;
+
+        let ext = if cfg!(target_os = "windows") {
+            "ps1"
+        } else {
+            "sh"
+        };
+        let script_path = dir.join(format!("{}.{}", p.name, ext));
+
+        std::fs::write(&script_path, &p.script_content).map_err(|e| {
+            McpError::internal_error(format!("Failed to write script file: {e}"), None)
+        })?;
+
         let db = self.get_db()?;
         let cmd = db
             .add_slash_command(NewSlashCommand {
                 name: p.name,
                 description: p.description,
-                script_path: p.script_path,
+                script_path: script_path.to_string_lossy().to_string(),
             })
             .map_err(db_err)?;
         Ok(json_text(&cmd))

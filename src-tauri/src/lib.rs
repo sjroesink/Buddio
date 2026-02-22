@@ -4,10 +4,16 @@ mod context;
 
 use commands::*;
 use context::LaunchContext;
+use std::env;
 use std::sync::{Arc, Mutex as StdMutex};
 use tauri::{Emitter, Manager, WindowEvent};
 use tauri_plugin_global_shortcut::{Code, GlobalShortcutExt, Modifiers, Shortcut, ShortcutState};
 use tokio::sync::Mutex;
+
+/// Returns true when GOLAUNCH_TEST=1 is set (used by E2E test harness).
+fn is_test_mode() -> bool {
+    env::var("GOLAUNCH_TEST").map_or(false, |v| v == "1")
+}
 
 use acp::manager::AcpManager;
 
@@ -78,6 +84,15 @@ pub fn run() {
 
             // Initialize launch context state
             app.manage(LaunchContextState(StdMutex::new(LaunchContext::default())));
+
+            // In test mode, skip global shortcut registration and keep window visible
+            if is_test_mode() {
+                if let Some(window) = app.get_webview_window("main") {
+                    let _ = window.show();
+                    let _ = window.set_focus();
+                }
+                return Ok(());
+            }
 
             // Register global shortcut: Option+Space on macOS, Ctrl+Space on Windows/Linux
             let shortcut = if cfg!(target_os = "macos") {
