@@ -19,7 +19,45 @@ fn normalize_command_preview(text: &str) -> String {
         .join(" ")
 }
 
-fn should_auto_allow_read_lookup(command_preview: Option<&str>) -> bool {
+/// GoLaunch MCP tools that are read-only and safe to auto-allow.
+const GOLAUNCH_READ_TOOLS: &[&str] = &[
+    "items_get",
+    "items_search",
+    "items_list",
+    "items_get_categories",
+    "items_export",
+    "memory_get",
+    "memory_get_by_key",
+    "memory_search",
+    "memory_list",
+    "memory_touch",
+    "memory_get_relevant",
+    "history_search",
+    "history_recent",
+    "history_suggest",
+    "history_recent_rewrites",
+    "conversations_get",
+    "conversations_list",
+    "conversations_search",
+    "conversations_get_messages",
+    "conversations_search_messages",
+    "conversations_recent_context",
+    "slash_commands_get",
+    "slash_commands_list",
+    "slash_commands_search",
+    "settings_get",
+    "settings_list",
+    "db_path",
+];
+
+fn should_auto_allow(tool_name: &str, command_preview: Option<&str>) -> bool {
+    // Auto-allow GoLaunch MCP read-only tools
+    let tool_lower = tool_name.to_lowercase();
+    if GOLAUNCH_READ_TOOLS.iter().any(|t| tool_lower.contains(t)) {
+        return true;
+    }
+
+    // Legacy: auto-allow read-only golaunch-cli bash commands
     let Some(preview) = command_preview else {
         return false;
     };
@@ -27,12 +65,10 @@ fn should_auto_allow_read_lookup(command_preview: Option<&str>) -> bool {
     let normalized = normalize_command_preview(preview);
     let padded = format!(" {normalized} ");
 
-    // Only auto-allow golaunch-cli commands
     if !padded.contains("golaunch-cli") {
         return false;
     }
 
-    // Block known write/mutating operations — everything else is auto-allowed
     let is_write_operation = padded.contains(" add ")
         || padded.contains(" remove ")
         || padded.contains(" delete ")
@@ -124,7 +160,7 @@ impl Client for GoLaunchClient {
             })
             .collect();
 
-        if should_auto_allow_read_lookup(command_preview.as_deref()) {
+        if should_auto_allow(&tool_name, command_preview.as_deref()) {
             if let Some(option_id) = pick_auto_allow_option_id(&options) {
                 return Ok(RequestPermissionResponse::new(
                     RequestPermissionOutcome::Selected(SelectedPermissionOutcome::new(

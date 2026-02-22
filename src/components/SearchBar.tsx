@@ -144,12 +144,14 @@ function SearchBar({
 
   return (
     <div
+      data-testid="search-bar"
       className={`flex items-center px-4 py-3 border-launcher-border/30 ${
         position === "bottom" ? "border-t" : "border-b"
       }`}
     >
       {isComposer && onBackClick && (
         <button
+          data-testid="back-button"
           onClick={onBackClick}
           className="mr-2 p-1 rounded text-launcher-muted hover:text-launcher-text hover:bg-launcher-hover transition-colors"
           title="Back to search (Esc)"
@@ -227,6 +229,7 @@ function SearchBar({
         <ContextDropdown contextInfo={contextInfo} />
       )}
       <input
+        data-testid="search-input"
         ref={inputRef}
         type="text"
         value={query}
@@ -246,6 +249,7 @@ function SearchBar({
       <AgentStatusIndicator status={agentStatus} onClick={onAgentClick} />
       {query && (
         <button
+          data-testid="clear-button"
           onClick={() => onQueryChange("")}
           className="ml-2 p-1 rounded text-launcher-muted hover:text-launcher-text hover:bg-launcher-hover transition-colors"
         >
@@ -265,6 +269,7 @@ function SearchBar({
         </button>
       )}
       <button
+        data-testid="settings-button"
         onClick={onSettingsClick}
         className="ml-2 p-1 rounded text-launcher-muted hover:text-launcher-text hover:bg-launcher-hover transition-colors"
         title="Agent Settings (Ctrl+,)"

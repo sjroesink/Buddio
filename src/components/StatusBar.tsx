@@ -12,8 +12,8 @@ function StatusBar({
   hasSuggestions,
 }: StatusBarProps) {
   return (
-    <div className="flex items-center justify-between px-4 py-2 border-t border-launcher-border/30 text-[11px] text-launcher-muted/50">
-      <span>
+    <div data-testid="status-bar" className="flex items-center justify-between px-4 py-2 border-t border-launcher-border/30 text-[11px] text-launcher-muted/50">
+      <span data-testid="status-text">
         {hasSuggestions
           ? "Suggestions"
           : agentMode

@@ -84,38 +84,39 @@ function ExecuteItemAction({
 }) {
   const [executed, setExecuted] = useState<Set<string>>(new Set());
 
+  // Only show the most recently created item (last in the list)
+  const latestItem = items[items.length - 1];
+  if (!latestItem) return null;
+
+  const done = executed.has(latestItem.id);
+
   return (
     <div className="mb-3 ml-1 space-y-1.5">
-      {items.map((item) => {
-        const done = executed.has(item.id);
-        return (
-          <div key={item.id} className="flex items-center gap-2">
-            {done ? (
-              <div className="inline-flex items-center gap-1.5 px-2.5 py-1 rounded-md text-xs font-medium bg-green-500/20 text-green-300 border border-green-500/30">
-                <svg className="w-3 h-3" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
-                  <path strokeLinecap="round" strokeLinejoin="round" d="M5 13l4 4L19 7" />
-                </svg>
-                Launched
-              </div>
-            ) : (
-              <button
-                onClick={() => {
-                  onExecute(item.id);
-                  setExecuted((prev) => new Set(prev).add(item.id));
-                }}
-                className="inline-flex items-center gap-1.5 px-2.5 py-1 rounded-md text-xs font-medium bg-launcher-accent/20 text-launcher-accent border border-launcher-accent/30 hover:bg-launcher-accent/30 hover:text-launcher-accent transition-colors"
-                title={`Run: ${item.title}`}
-              >
-                <svg className="w-3 h-3" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
-                  <path strokeLinecap="round" strokeLinejoin="round" d="M14.752 11.168l-3.197-2.132A1 1 0 0010 9.87v4.263a1 1 0 001.555.832l3.197-2.132a1 1 0 000-1.664z" />
-                  <path strokeLinecap="round" strokeLinejoin="round" d="M21 12a9 9 0 11-18 0 9 9 0 0118 0z" />
-                </svg>
-                Run "{item.title}"
-              </button>
-            )}
+      <div className="flex items-center gap-2">
+        {done ? (
+          <div className="inline-flex items-center gap-1.5 px-2.5 py-1 rounded-md text-xs font-medium bg-green-500/20 text-green-300 border border-green-500/30">
+            <svg className="w-3 h-3" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
+              <path strokeLinecap="round" strokeLinejoin="round" d="M5 13l4 4L19 7" />
+            </svg>
+            Launched
           </div>
-        );
-      })}
+        ) : (
+          <button
+            onClick={() => {
+              onExecute(latestItem.id);
+              setExecuted((prev) => new Set(prev).add(latestItem.id));
+            }}
+            className="inline-flex items-center gap-1.5 px-2.5 py-1 rounded-md text-xs font-medium bg-green-500/20 text-green-300 border border-green-500/30 hover:bg-green-500/30 hover:text-green-200 transition-colors"
+            title={`Run: ${latestItem.title}`}
+          >
+            <svg className="w-3 h-3" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
+              <path strokeLinecap="round" strokeLinejoin="round" d="M14.752 11.168l-3.197-2.132A1 1 0 0010 9.87v4.263a1 1 0 001.555.832l3.197-2.132a1 1 0 000-1.664z" />
+              <path strokeLinecap="round" strokeLinejoin="round" d="M21 12a9 9 0 11-18 0 9 9 0 0118 0z" />
+            </svg>
+            Run "{latestItem.title}"
+          </button>
+        )}
+      </div>
     </div>
   );
 }
@@ -158,7 +159,7 @@ export function AgentResponse({
   }, [thread, thoughts, isThinking, turnActive, permissionRequest]);
 
   return (
-    <div className="flex flex-col flex-1 min-h-0">
+    <div data-testid="agent-response" className="flex flex-col flex-1 min-h-0">
       {(onNewConversation || onShowHistory) && (
         <div className="flex items-center justify-end px-3 py-1 border-b border-launcher-border/20 flex-shrink-0">
           {onShowHistory && (
@@ -208,14 +209,16 @@ export function AgentResponse({
         </div>
       )}
 
-      <div className="agent-response" ref={scrollRef}>
+      <div data-testid="agent-thread" className="agent-response" ref={scrollRef}>
         {thread.map((entry, index) => {
+          // Skip empty assistant messages
           if (entry.role === "assistant" && entry.content.length === 0) {
             return null;
           }
 
           // Tool call entries render as compact status lines
           if (entry.role === "tool") {
+            const isPending = entry.toolStatus === "pending";
             const statusClass = entry.toolStatus
               ? `tool-call-status-${entry.toolStatus}`
               : "tool-call-status-running";
@@ -224,21 +227,29 @@ export function AgentResponse({
                 ? "DONE"
                 : (entry.toolStatus ?? "running").toUpperCase();
             return (
-              <div key={entry.id} className="tool-call-entry">
-                <span className="tool-call-title">
-                  {entry.toolTitle ?? "Tool"}
-                </span>
-                {entry.commandPreview && (
-                  <span
-                    className="tool-call-command"
-                    title={entry.commandPreview}
-                  >
-                    {entry.commandPreview}
+              <div key={entry.id}>
+                <div className="tool-call-entry">
+                  <span className="tool-call-title">
+                    {entry.toolTitle ?? "Tool"}
                   </span>
+                  {entry.commandPreview && (
+                    <span
+                      className="tool-call-command"
+                      title={entry.commandPreview}
+                    >
+                      {entry.commandPreview}
+                    </span>
+                  )}
+                  <span className={`tool-call-status ${statusClass}`}>
+                    {statusLabel}
+                  </span>
+                </div>
+                {isPending && permissionRequest && (
+                  <PermissionDialog
+                    request={permissionRequest}
+                    onResolve={onResolvePermission}
+                  />
                 )}
-                <span className={`tool-call-status ${statusClass}`}>
-                  {statusLabel}
-                </span>
               </div>
             );
           }
@@ -305,16 +316,20 @@ export function AgentResponse({
           );
         })}
 
-        {permissionRequest && (
-          <div className="mb-3 flex justify-start">
-            <div className="max-w-[85%] rounded-lg bg-launcher-surface/55 border border-launcher-border/40">
-              <PermissionDialog
-                request={permissionRequest}
-                onResolve={onResolvePermission}
-              />
+        {/* Fallback: show permission dialog at the bottom if there's no matching tool_call entry */}
+        {permissionRequest &&
+          !thread.some(
+            (e) => e.role === "tool" && e.toolStatus === "pending",
+          ) && (
+            <div className="mb-3 flex justify-start">
+              <div className="max-w-[85%] rounded-lg bg-launcher-surface/55 border border-launcher-border/40">
+                <PermissionDialog
+                  request={permissionRequest}
+                  onResolve={onResolvePermission}
+                />
+              </div>
             </div>
-          </div>
-        )}
+          )}
 
         {isThinking && (
           <div className="agent-thinking mb-2">

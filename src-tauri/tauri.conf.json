@@ -15,7 +15,7 @@
         "title": "GoLaunch",
         "label": "main",
         "width": 680,
-        "height": 480,
+        "height": 64,
         "decorations": false,
         "transparent": true,
         "alwaysOnTop": true,

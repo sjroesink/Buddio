@@ -14,7 +14,18 @@
       "Bash(pulumi stack:*)",
       "Bash(pulumi config:*)",
       "Bash(\"D:\\\\Projects\\\\GoLaunch\\\\target\\\\debug\\\\golaunch-cli.exe\" add --title \"Pulumi Secrets Testing\" --subtitle \"Toon Pulumi secrets van de testing stack\" --action-value \"cd /d D:\\\\Projects\\\\Fincent\\\\src\\\\kubernetes\\\\pulumi\\\\Deployment-Stack && pulumi config --show-secrets --stack testing\" --action-type command --category \"Development\" --icon \"🔐\" --tags \"pulumi,fincent,secrets\")",
-      "Bash(\"D:\\\\Projects\\\\GoLaunch\\\\target\\\\debug\\\\golaunch-cli.exe\" update c1bbdad6-34bf-4993-87fd-ad2dac6c4ff7 --action-value \"start powershell -NoExit -Command \"\"Set-Location ''D:\\\\Projects\\\\Fincent\\\\src\\\\kubernetes\\\\pulumi\\\\Deployment-Stack''; pulumi config --show-secrets --stack testing\"\"\")"
+      "Bash(\"D:\\\\Projects\\\\GoLaunch\\\\target\\\\debug\\\\golaunch-cli.exe\" update c1bbdad6-34bf-4993-87fd-ad2dac6c4ff7 --action-value \"start powershell -NoExit -Command \"\"Set-Location ''D:\\\\Projects\\\\Fincent\\\\src\\\\kubernetes\\\\pulumi\\\\Deployment-Stack''; pulumi config --show-secrets --stack testing\"\"\")",
+      "Bash(\"D:\\\\Projects\\\\GoLaunch\\\\target\\\\debug\\\\golaunch-cli.exe\" conversations show:*)",
+      "Bash(\"D:\\\\Projects\\\\GoLaunch\\\\target\\\\debug\\\\golaunch-cli.exe\" history --limit 50 --json)",
+      "Bash(\"D:\\\\Projects\\\\GoLaunch\\\\target\\\\debug\\\\golaunch-cli.exe\" add --title \"Pulumi Secrets Acceptance\" --action-value \"start powershell -NoExit -Command \"\"Set-Location ''D:\\\\Projects\\\\Fincent\\\\src\\\\kubernetes\\\\pulumi\\\\Deployment-Stack''; pulumi config --show-secrets --stack acceptance\"\"\" --action-type command --category \"Development\" --subtitle \"Toon Pulumi secrets van de acceptance stack\" --icon \"🔐\" --tags \"pulumi,secrets,acceptance,fincent\")",
+      "Bash(\"D:\\\\Projects\\\\GoLaunch\\\\target\\\\debug\\\\golaunch-cli.exe\" search \"google\" --json)",
+      "Bash(\"D:\\\\Projects\\\\GoLaunch\\\\target\\\\debug\\\\golaunch-cli.exe\" add --title \"Google\" --action-value \"https://www.google.com\" --action-type url --category \"Web\" --icon \"🔍\")",
+      "Bash(\"D:\\\\Projects\\\\GoLaunch\\\\target\\\\debug\\\\golaunch-cli.exe\" add:*)",
+      "Bash(\"D:\\\\Projects\\\\GoLaunch\\\\target\\\\debug\\\\golaunch-cli.exe\" search \"github\" --json)",
+      "Bash(\"D:\\\\Projects\\\\GoLaunch\\\\target\\\\debug\\\\golaunch-cli.exe\" add --title \"GitHub\" --action-value \"https://github.com\" --action-type url --category \"Web\" --icon \"🐙\" --tags \"github,git,code\")",
+      "Bash(\"C:/Users/sjroe/AppData/Local/golaunch/slash-commands/kill.ps1\":*)",
+      "mcp__golaunch__slash_commands_add",
+      "mcp__golaunch__slash_commands_run"
     ]
   }
 }

@@ -14,6 +14,7 @@ import CommandSuggestionPanel from "./components/CommandSuggestionPanel";
 import SlashCommandList from "./components/SlashCommandList";
 import ConversationHistory from "./components/ConversationHistory";
 import { RewriteQuickActions } from "./components/RewriteQuickActions";
+import { Toast, type ToastData } from "./components/Toast";
 import type { AgentConfig, LaunchItem } from "./types";
 
 function App() {
@@ -24,11 +25,21 @@ function App() {
   const [historySelectedIndex, setHistorySelectedIndex] = useState(0);
   const [rewriteSelectedIndex, setRewriteSelectedIndex] = useState(0);
   const [newlyCreatedItems, setNewlyCreatedItems] = useState<LaunchItem[]>([]);
+  const [toast, setToast] = useState<ToastData | null>(null);
   const containerRef = useRef<HTMLDivElement>(null);
   const itemIdsBeforeTurnRef = useRef<Set<string>>(new Set());
 
   const agent = useAcpAgent();
   const launchCtx = useLaunchContext();
+
+  const handleExecuteSuccess = useCallback(async () => {
+    setToast({ message: "Launched", type: "success" });
+    await invoke("hide_window");
+  }, []);
+
+  const handleExecuteError = useCallback((error: string) => {
+    setToast({ message: error, type: "error" });
+  }, []);
 
   const launcher = useLauncher({
     agentStatus: agent.status,
@@ -37,6 +48,9 @@ function App() {
     onSlashCommandCreate: agent.promptSlashCommand,
     onAgentCancel: agent.cancel,
     agentTurnActive: agent.turnActive,
+    hasSelectedText: launchCtx.hasSelection,
+    onExecuteSuccess: handleExecuteSuccess,
+    onExecuteError: handleExecuteError,
   });
 
   // Load auto_fallback setting on mount
@@ -71,6 +85,7 @@ function App() {
       setForceAgentMode(false);
       setHistorySelectedIndex(0);
       setRewriteSelectedIndex(0);
+      setToast(null);
       if (agent.turnActive) {
         agent.cancel();
       }
@@ -142,9 +157,11 @@ function App() {
     async (itemId: string) => {
       try {
         await invoke("execute_item", { id: itemId });
+        setToast({ message: "Launched", type: "success" });
         await invoke("hide_window");
       } catch (e) {
         console.error("Failed to execute item:", e);
+        setToast({ message: String(e), type: "error" });
       }
     },
     [],
@@ -176,8 +193,10 @@ function App() {
     !showRewriteActions &&
     (showHistory || agent.conversations.length > 0);
 
+  const hasQuery = launcher.query.trim().length > 0;
+  const showResults = hasQuery && launcher.items.length > 0;
   const showOnlySearch =
-    launcher.items.length === 0 &&
+    (!hasQuery || launcher.items.length === 0) &&
     !launcher.isSlashMode &&
     !showAgentThread &&
     !showHistory &&
@@ -317,6 +336,7 @@ function App() {
 
   return (
     <div
+      data-testid="app-root"
       ref={containerRef}
       className="h-full flex flex-col bg-launcher-bg/95 backdrop-blur-xl rounded-xl border border-launcher-border/50 shadow-2xl overflow-hidden"
       onKeyDown={handleContainerKeyDown}
@@ -406,7 +426,7 @@ function App() {
             position="top"
           />
 
-          {!showOnlySearch && launcher.categories.length > 0 && (
+          {showResults && launcher.categories.length > 0 && (
             <CategoryBar
               categories={launcher.categories}
               activeCategory={launcher.activeCategory}
@@ -414,7 +434,7 @@ function App() {
             />
           )}
 
-          {!showOnlySearch &&
+          {hasQuery &&
             (launcher.isSlashMode ? (
               <SlashCommandList
                 commands={launcher.slashCommands}
@@ -434,16 +454,16 @@ function App() {
                 onSave={launcher.saveCommandFromSuggestion}
                 saving={launcher.savingCommand}
               />
-            ) : (
+            ) : showResults ? (
               <ItemList
                 items={launcher.items}
                 selectedIndex={launcher.selectedIndex}
                 onSelect={launcher.setSelectedIndex}
                 onExecute={launcher.executeSelected}
               />
-            ))}
+            ) : null)}
 
-          {!showOnlySearch && (
+          {(showResults || (hasQuery && launcher.suggestions.length > 0)) && (
             <StatusBar
               itemCount={launcher.items.length}
               agentMode={launcher.agentMode}
@@ -463,6 +483,10 @@ function App() {
           onClose={() => setSettingsOpen(false)}
           onSetConfigOption={agent.setConfigOption}
         />
+      )}
+
+      {toast && (
+        <Toast toast={toast} onDismiss={() => setToast(null)} />
       )}
     </div>
   );

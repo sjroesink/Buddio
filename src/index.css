@@ -240,6 +240,35 @@ body,
   color: rgba(250, 204, 21, 0.9);
 }
 
+.permission-command-expandable {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  margin-bottom: 6px;
+  padding: 2px 0;
+  cursor: pointer;
+  font-size: 11px;
+  color: rgba(255, 255, 255, 0.45);
+  user-select: none;
+}
+.permission-command-expandable:hover {
+  color: rgba(255, 255, 255, 0.65);
+}
+.permission-expand-arrow {
+  font-size: 8px;
+  transition: transform 0.15s;
+  display: inline-block;
+}
+.permission-expand-arrow.expanded {
+  transform: rotate(90deg);
+}
+.permission-command-label {
+  font-family: ui-monospace, SFMono-Regular, "SF Mono", Menlo, monospace;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
 .permission-command-preview {
   margin-bottom: 8px;
   padding: 6px 8px;
@@ -805,6 +834,16 @@ a,
 .window-no-drag,
 .window-no-drag * {
   -webkit-app-region: no-drag;
+}
+
+/* Toast notification */
+@keyframes toast-in {
+  0% { opacity: 0; transform: translate(-50%, 8px); }
+  100% { opacity: 1; transform: translate(-50%, 0); }
+}
+
+.animate-toast-in {
+  animation: toast-in 0.2s ease-out;
 }
 
 .agent-settings-overlay,

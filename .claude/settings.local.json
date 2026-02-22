@@ -2,7 +2,16 @@
   "permissions": {
     "allow": [
       "mcp__Windows-MCP__Scrape",
-      "Bash(ls:*)"
+      "Bash(ls:*)",
+      "Bash(dir:*)",
+      "Bash(gh run view:*)",
+      "WebFetch(domain:v2.tauri.app)",
+      "Bash(cargo build:*)",
+      "Bash(npm run build:*)",
+      "WebFetch(domain:agentclientprotocol.com)",
+      "Bash(python3:*)",
+      "Bash(cargo check:*)",
+      "Bash(git add:*)"
     ]
   }
 }

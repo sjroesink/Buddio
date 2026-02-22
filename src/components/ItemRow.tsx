@@ -18,6 +18,7 @@ function ItemRow({ item, isSelected, onHover, onClick }: ItemRowProps) {
 
   return (
     <div
+      data-testid={`item-row-${item.id}`}
       onMouseEnter={onHover}
       onClick={onClick}
       className={`window-no-drag flex items-center px-4 py-2.5 mx-1 rounded-lg cursor-pointer transition-all duration-100 ${

@@ -19,7 +19,7 @@ function ItemList({ items, selectedIndex, onSelect, onExecute }: ItemListProps) 
 
   if (items.length === 0) {
     return (
-      <div className="flex-1 flex items-center justify-center text-launcher-muted/50">
+      <div data-testid="item-list-empty" className="flex-1 flex items-center justify-center text-launcher-muted/50">
         <div className="text-center">
           <svg
             className="w-12 h-12 mx-auto mb-3 opacity-30"
@@ -44,7 +44,7 @@ function ItemList({ items, selectedIndex, onSelect, onExecute }: ItemListProps) 
   }
 
   return (
-    <div ref={listRef} className="flex-1 overflow-y-auto py-1">
+    <div data-testid="item-list" ref={listRef} className="flex-1 overflow-y-auto py-1">
       {items.map((item, index) => (
         <ItemRow
           key={item.id}

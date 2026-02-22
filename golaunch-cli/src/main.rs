@@ -15,6 +15,7 @@ struct Cli {
     command: Commands,
 }
 #[derive(Subcommand)]
+#[allow(clippy::enum_variant_names)]
 enum Commands {
     /// Add a new item to the launcher
     Add {

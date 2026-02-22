@@ -36,10 +36,30 @@ pub fn get_all_items() -> Result<Vec<Item>, String> {
 }
 
 #[tauri::command]
-pub fn execute_item(id: String) -> Result<(), String> {
+pub fn execute_item(
+    id: String,
+    context_state: tauri::State<'_, LaunchContextState>,
+) -> Result<(), String> {
     let db = Database::new()?;
-    let item = db.get_item(&id)?;
+    let mut item = db.get_item(&id)?;
     db.increment_frequency(&id)?;
+
+    // Replace {selection} placeholder with actual selected text
+    let launch_context = context_state
+        .0
+        .lock()
+        .map(|c| c.clone())
+        .unwrap_or_default();
+
+    if let Some(selected_text) = &launch_context.selected_text {
+        // URL encode the selected text for URLs
+        if item.action_type == "url" {
+            let encoded = urlencoding::encode(selected_text);
+            item.action_value = item.action_value.replace("{selection}", &encoded);
+        } else {
+            item.action_value = item.action_value.replace("{selection}", selected_text);
+        }
+    }
 
     // Record command history
     let _ = db.record_command(NewCommandHistory {

@@ -29,18 +29,25 @@ export function AgentStatusIndicator({ status, onClick }: AgentStatusIndicatorPr
       tabIndex={clickable ? 0 : -1}
       type="button"
     >
-      <svg
-        className="w-4 h-4"
-        fill="none"
-        viewBox="0 0 24 24"
-        stroke={STATUS_COLORS[status]}
-        strokeWidth={2}
-      >
-        <path
-          strokeLinecap="round"
-          strokeLinejoin="round"
-          d="M9.75 3.104v5.714a2.25 2.25 0 01-.659 1.591L5 14.5M9.75 3.104c-.251.023-.501.05-.75.082m.75-.082a24.301 24.301 0 014.5 0m0 0v5.714a2.25 2.25 0 00.659 1.591L19 14.5M14.25 3.104c.251.023.501.05.75.082M19 14.5l-1.47 4.41a2.25 2.25 0 01-2.133 1.59h-6.794a2.25 2.25 0 01-2.133-1.59L5 14.5m14 0H5"
-        />
+      <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 100 100" width="16" height="16">
+        <defs>
+          <linearGradient id="screenGrad" x1="0%" y1="0%" x2="100%" y2="100%">
+            <stop offset="0%" stopColor="#0f172a"/>
+            <stop offset="100%" stopColor="#1e293b"/>
+          </linearGradient>
+        </defs>
+
+        <line x1="50" y1="20" x2="50" y2="8" stroke="#64748b" strokeWidth="4" strokeLinecap="round"/>
+        <circle cx="50" cy="6" r="4" fill={STATUS_COLORS[status]} />
+
+        <rect x="15" y="22" width="70" height="56" rx="10" fill="#cbd5e1" stroke="#475569" strokeWidth="3" />
+
+        <rect x="22" y="29" width="56" height="40" rx="4" fill="url(#screenGrad)" />
+
+        <text x="50" y="56" fontFamily="monospace" fontSize="22" fill="#38bdf8" fontWeight="bold" textAnchor="middle">&lt;/&gt;</text>
+
+        <path d="M40 78 L60 78 L65 90 L35 90 Z" fill="#64748b" />
+        <line x1="30" y1="92" x2="70" y2="92" stroke="#475569" strokeWidth="4" strokeLinecap="round"/>
       </svg>
     </button>
   );
