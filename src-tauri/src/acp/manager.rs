@@ -540,26 +540,6 @@ fn convert_config_option(opt: &SessionConfigOption) -> SessionConfigOptionInfo {
     }
 }
 
-/// Resolve the path to the golaunch-cli binary.
-/// Looks next to the current executable first (production install),
-/// then falls back to just the binary name (assumes PATH).
-fn resolve_cli_path() -> String {
-    if let Ok(exe) = std::env::current_exe() {
-        if let Some(dir) = exe.parent() {
-            let cli_name = if cfg!(target_os = "windows") {
-                "golaunch-cli.exe"
-            } else {
-                "golaunch-cli"
-            };
-            let candidate = dir.join(cli_name);
-            if candidate.exists() {
-                return candidate.to_string_lossy().to_string();
-            }
-        }
-    }
-    "golaunch-cli".to_string()
-}
-
 /// Resolve a binary path for agent spawning.
 /// If the binary is on PATH (or is "npx"), use it directly.
 /// Otherwise check the GoLaunch agents install directory.
@@ -604,7 +584,6 @@ fn build_slash_command_prompt(
     memories: &[Memory],
     slash_commands: &[SlashCommand],
 ) -> String {
-    let cli = resolve_cli_path();
     let slash_dir = golaunch_core::Database::slash_commands_dir()
         .unwrap_or_else(|_| "slash-commands".into())
         .to_string_lossy()
@@ -621,8 +600,8 @@ fn build_slash_command_prompt(
             For example: `/kill 4924` → a script that kills the process running on port 4924.\n\
          2. Briefly confirm with the user what the script will do.\n\
          3. Write the script file to the slash-commands directory.\n\
-         4. Register it with the CLI using `slash-commands add`.\n\
-         5. Execute it immediately using `slash-commands run`.\n\n\
+         4. Register it using the `slash_commands_add` MCP tool.\n\
+         5. Execute it immediately using the `slash_commands_run` MCP tool.\n\n\
          Guidelines:\n\
          - Be smart about inferring the purpose from the command name — the user expects you to understand.\n\
          - Be concise — the user is in a launcher and wants quick results.\n\
@@ -652,25 +631,19 @@ fn build_slash_command_prompt(
         );
     }
 
-    // ── CLI reference (slash commands only) ──
+    // ── MCP tools reference (slash commands only) ──
     p.push_str(&format!(
-        "## CLI Reference\n\
-         Binary: `{cli}`\n\
+        "## GoLaunch MCP Tools\n\
          Script storage directory: `{slash_dir}`\n\n\
-         ```bash\n\
-         # List all slash commands\n\
-         \"{cli}\" slash-commands list --json\n\n\
-         # Register a new slash command\n\
-         \"{cli}\" slash-commands add --name \"kill\" --description \"Kill process on port\" --script-path \"{slash_dir}/kill.ps1\"\n\n\
-         # Run a slash command with arguments\n\
-         \"{cli}\" slash-commands run --name \"kill\" --args \"4924\"\n\n\
-         # Get a slash command by name\n\
-         \"{cli}\" slash-commands get --name \"kill\"\n\n\
-         # Remove a slash command\n\
-         \"{cli}\" slash-commands remove --name \"kill\"\n\
-         ```\n\n\
-         Workflow: first write the script file to disk, then register with `slash-commands add`, \
-         then execute with `slash-commands run`.\n\n"
+         Available slash command tools:\n\
+         - `slash_commands_add` — Register a new slash command (name, description, script_path)\n\
+         - `slash_commands_get` — Get a slash command by name\n\
+         - `slash_commands_list` — List all registered slash commands\n\
+         - `slash_commands_search` — Search slash commands by name or description\n\
+         - `slash_commands_remove` — Remove a slash command by name\n\
+         - `slash_commands_run` — Execute a slash command by name with optional args\n\n\
+         Workflow: first write the script file to disk, then register with `slash_commands_add`, \
+         then execute with `slash_commands_run`.\n\n"
     ));
 
     // ── User memory / preferences ──
@@ -713,7 +686,8 @@ fn build_slash_command_prompt(
 }
 
 /// Build a structured prompt for the ACP agent that includes system instructions,
-/// CLI reference, user context, and the query.
+/// MCP tools reference, user context, and the query.
+#[allow(clippy::too_many_arguments)]
 fn build_agent_prompt(
     query: &str,
     context_items: &[Item],
@@ -724,12 +698,6 @@ fn build_agent_prompt(
     launch_context: &crate::context::LaunchContext,
     slash_commands: &[SlashCommand],
 ) -> String {
-    let cli = resolve_cli_path();
-    let db_path = golaunch_core::Database::db_path()
-        .unwrap_or_else(|_| "golaunch.db".into())
-        .to_string_lossy()
-        .to_string();
-
     let mut p = String::with_capacity(4096);
 
     // ── System instructions ──
@@ -738,13 +706,13 @@ fn build_agent_prompt(
          launcher application. The user typed a search query that didn't match any of their \
          predefined commands, so they're asking you for help.\n\n\
          Your capabilities:\n\
-         1. Directly add, update, or remove launcher commands using the GoLaunch CLI\n\
+         1. Directly add, update, or remove launcher commands using the GoLaunch MCP tools\n\
          2. Query the launcher database to find commands, history, and memories\n\
          3. Manage the user's persistent memory (preferences, facts, patterns)\n\
          4. Help the user figure out what command they need\n\
          5. Answer questions about tools, CLIs, and workflows\n\n\
          IMPORTANT — Action-oriented behavior:\n\
-         - When the user wants to add a command, DO IT immediately with the CLI. Don't just suggest it.\n\
+         - When the user wants to add a command, DO IT immediately with the appropriate MCP tool. Don't just suggest it.\n\
          - When the user asks about their setup, QUERY the database first, then answer.\n\
          - If the query is ambiguous, CHECK memory and existing commands first before asking clarifying questions.\n\
          - Treat memory facts as authoritative context (e.g., if a name maps to a project, use that meaning).\n\
@@ -761,7 +729,7 @@ fn build_agent_prompt(
               (no explanation, no commentary). The launcher will offer a \"Replace selection\" button.\n\
            B) ACTION requests — when the user asks to add a command, open something, go somewhere, \
               or perform any action. Even if there is selected text, this is NOT a rewrite. \
-              Add the item using the CLI and confirm what you did. The launcher will offer a \"Run\" button.\n\
+              Add the item using the appropriate MCP tool and confirm what you did. The launcher will offer a \"Run\" button.\n\
          - CRITICAL for rewrites: Preserve the exact same format as the selected text. If the input is plain text, \
            return plain text. If it's code, return code without wrapping it in markdown code fences. \
            If it's HTML, return HTML. Never add markdown formatting (like ```), headers, or bullet points \
@@ -770,71 +738,61 @@ fn build_agent_prompt(
          - When working with selected text, consider the source application for appropriate formatting.\n\n",
     );
 
-    // ── CLI Reference ──
-    p.push_str(&format!(
-        "## GoLaunch CLI\n\
-         Binary: `{cli}`\n\
-         Database: `{db_path}`\n\n\
-         ### Commands (Items)\n\
-         ```bash\n\
-         # Add a new launcher command\n\
-         \"{cli}\" add --title \"Title\" --action-value \"the_command\" --action-type command --category \"Category\"\n\
-         # Optional flags: --subtitle \"desc\" --icon \"emoji\" --tags \"t1,t2\"\n\n\
-         # Add a URL shortcut\n\
-         \"{cli}\" add --title \"Google\" --action-value \"https://google.com\" --action-type url --category \"Web\"\n\n\
-         # List all commands (use --json for structured output)\n\
-         \"{cli}\" list\n\
-         \"{cli}\" list --category \"Development\" --json\n\n\
-         # Search commands\n\
-         \"{cli}\" search \"query\" --json\n\n\
-         # Update a command by ID\n\
-         \"{cli}\" update <id> --title \"New Title\" --action-value \"new_cmd\" --category \"Cat\"\n\n\
-         # Remove a command by ID\n\
-         \"{cli}\" remove <id>\n\
-         ```\n\
+    // ── MCP Tools Reference ──
+    p.push_str(
+        "## GoLaunch MCP Tools\n\
+         You have GoLaunch MCP tools available for managing the launcher. Use these tools directly.\n\n\
+         ### Items\n\
+         - `items_add` — Add a new launcher item (title, action_value, action_type: command/url/script, category, subtitle, icon, tags)\n\
+         - `items_get` — Get an item by ID\n\
+         - `items_update` — Update item fields by ID (only provided fields are changed)\n\
+         - `items_remove` — Remove an item by ID\n\
+         - `items_search` — Search items by query (matches title, subtitle, tags, category)\n\
+         - `items_list` — List all items, optionally filtered by category\n\
+         - `items_run` — Execute an item by ID (opens URLs, runs commands/scripts)\n\
+         - `items_get_categories` — List all distinct categories\n\
+         - `items_import` — Import items from a JSON array\n\
+         - `items_export` — Export all items as JSON\n\
          Action types: `command` (shell), `url` (browser), `script` (script file)\n\n\
          ### Memory\n\
-         ```bash\n\
-         # Store a preference or fact\n\
-         \"{cli}\" memory add --key \"preferred_editor\" --value \"vscode\" --type preference\n\
-         \"{cli}\" memory add --key \"project_dir\" --value \"D:\\\\Projects\" --type fact --context \"work\"\n\n\
-         # Query memories\n\
-         \"{cli}\" memory list --json\n\
-         \"{cli}\" memory list --type preference\n\
-         \"{cli}\" memory search \"editor\"\n\
-         \"{cli}\" memory get \"preferred_editor\"\n\n\
-         # Remove a memory\n\
-         \"{cli}\" memory remove <id>\n\
-         ```\n\
+         - `memory_add` — Add or update a memory (key, value, memory_type: preference/pattern/fact, context, confidence)\n\
+         - `memory_get` — Get memory by ID\n\
+         - `memory_get_by_key` — Get memory by key and optional context\n\
+         - `memory_remove` — Remove memory by ID\n\
+         - `memory_search` — Search memories by query\n\
+         - `memory_list` — List all memories, optionally filtered by type\n\
+         - `memory_touch` — Update last_accessed timestamp\n\
+         - `memory_get_relevant` — Get relevant memories (preferences/patterns with confidence > 0.3)\n\
          Memory types: `preference` (user preference), `pattern` (learned behavior), `fact` (stored info)\n\n\
-         ### History\n\
-         ```bash\n\
-         \"{cli}\" history              # last 20 commands\n\
-         \"{cli}\" history --limit 50\n\
-         \"{cli}\" history --search \"docker\" --json\n\
-         ```\n\n\
-         ### Import / Export\n\
-         ```bash\n\
-         \"{cli}\" export --output commands.json\n\
-         \"{cli}\" import commands.json\n\
-         ```\n\n\
+         ### Command History\n\
+         - `history_record` — Record a command execution\n\
+         - `history_search` — Search command history\n\
+         - `history_recent` — Get recent history entries (default: 20)\n\
+         - `history_suggest` — Get command suggestions based on query\n\
+         - `history_recent_rewrites` — Get recent rewrite prompts\n\n\
          ### Conversations\n\
-         ```bash\n\
-         # List recent conversations\n\
-         \"{cli}\" conversations list --limit 20 --json\n\n\
-         # Search conversations by content\n\
-         \"{cli}\" conversations search \"query\" --json\n\n\
-         # Show a conversation with all messages\n\
-         \"{cli}\" conversations show <id> --json\n\n\
-         # Get recent conversation context (formatted summary)\n\
-         \"{cli}\" conversations context --limit 5\n\
-         ```\n\
-         Use conversation commands to recall earlier discussions with the user.\n\n\
+         - `conversations_create` — Create a new conversation\n\
+         - `conversations_get` — Get conversation by ID\n\
+         - `conversations_list` — List recent conversations with previews\n\
+         - `conversations_search` — Search conversations by title/content\n\
+         - `conversations_delete` — Delete a conversation and its messages\n\
+         - `conversations_add_message` — Add a message (role: user/assistant, content)\n\
+         - `conversations_get_messages` — Get all messages in a conversation\n\
+         - `conversations_search_messages` — Search messages across conversations\n\
+         - `conversations_recent_context` — Get recent conversations with last messages\n\
+         Use conversation tools to recall earlier discussions with the user.\n\n\
          ### Slash Commands\n\
          Slash commands are user-defined scripts invoked with `/name args...` from the launcher.\n\
          Creation of new slash commands is handled by a dedicated agent — you do not need to create them.\n\
-         You can reference existing slash commands listed below for context.\n\n"
-    ));
+         You can reference existing slash commands listed below for context.\n\n\
+         ### Settings\n\
+         - `settings_get` — Get a setting by key\n\
+         - `settings_set` — Set a setting value\n\
+         - `settings_delete` — Delete a setting\n\
+         - `settings_list` — List all settings\n\n\
+         ### Utility\n\
+         - `db_path` — Get the database file path\n\n",
+    );
 
     // ── User memory / preferences ──
     if !memories.is_empty() {
@@ -921,7 +879,7 @@ fn build_agent_prompt(
     // ── Recent conversations ──
     if !recent_conversations.is_empty() {
         p.push_str("## Recent Conversation Context\n");
-        p.push_str("Summary of recent conversations with this user (use `conversations show <id>` for full details):\n\n");
+        p.push_str("Summary of recent conversations with this user (use `conversations_get_messages` for full details):\n\n");
         for (conv, messages) in recent_conversations {
             p.push_str(&format!(
                 "**{}** (id: {}, updated: {})\n",
