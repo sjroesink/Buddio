@@ -27,25 +27,20 @@ fn should_auto_allow_read_lookup(command_preview: Option<&str>) -> bool {
     let normalized = normalize_command_preview(preview);
     let padded = format!(" {normalized} ");
 
+    // Only auto-allow golaunch-cli commands
     if !padded.contains("golaunch-cli") {
         return false;
     }
 
-    let is_read_lookup = padded.contains(" memory search ")
-        || padded.contains(" memory list ")
-        || padded.contains(" memory get ")
-        || padded.contains(" conversations list ")
-        || padded.contains(" conversations search ")
-        || padded.contains(" conversations show ")
-        || padded.contains(" conversations context ")
-        || padded.contains(" slash-commands list ")
-        || padded.contains(" slash-commands get ");
+    // Block known write/mutating operations — everything else is auto-allowed
+    let is_write_operation = padded.contains(" add ")
+        || padded.contains(" remove ")
+        || padded.contains(" delete ")
+        || padded.contains(" update ")
+        || padded.contains(" import ")
+        || padded.contains(" run ");
 
-    let is_write_operation = padded.contains(" memory add ")
-        || padded.contains(" memory remove ")
-        || padded.contains(" delete ");
-
-    is_read_lookup && !is_write_operation
+    !is_write_operation
 }
 
 fn pick_auto_allow_option_id(options: &[PermissionOptionInfo]) -> Option<String> {

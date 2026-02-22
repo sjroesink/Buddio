@@ -33,8 +33,12 @@ export type AgentUpdate =
 
 export interface AgentThreadMessage {
   id: string;
-  role: "user" | "assistant";
+  role: "user" | "assistant" | "tool";
   content: string;
+  // Tool call fields (only when role === "tool")
+  toolTitle?: string;
+  toolStatus?: "pending" | "approved" | "running" | "completed" | "error";
+  commandPreview?: string;
 }
 
 export interface PlanEntry {

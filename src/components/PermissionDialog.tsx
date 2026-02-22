@@ -42,7 +42,13 @@ export function PermissionDialog({ request, onResolve }: PermissionDialogProps) 
     <div className="permission-dialog">
       <div className="permission-header">
         <span className="permission-title">{request.tool_name}</span>
+        <span className="permission-status-badge permission-status-pending">PENDING</span>
       </div>
+      {request.command_preview && (
+        <div className="permission-command-preview">
+          {request.command_preview}
+        </div>
+      )}
       <div className="permission-actions">
         <button
           className="permission-btn permission-btn-approve"

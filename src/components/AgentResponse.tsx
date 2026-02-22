@@ -214,6 +214,35 @@ export function AgentResponse({
             return null;
           }
 
+          // Tool call entries render as compact status lines
+          if (entry.role === "tool") {
+            const statusClass = entry.toolStatus
+              ? `tool-call-status-${entry.toolStatus}`
+              : "tool-call-status-running";
+            const statusLabel =
+              entry.toolStatus === "completed"
+                ? "DONE"
+                : (entry.toolStatus ?? "running").toUpperCase();
+            return (
+              <div key={entry.id} className="tool-call-entry">
+                <span className="tool-call-title">
+                  {entry.toolTitle ?? "Tool"}
+                </span>
+                {entry.commandPreview && (
+                  <span
+                    className="tool-call-command"
+                    title={entry.commandPreview}
+                  >
+                    {entry.commandPreview}
+                  </span>
+                )}
+                <span className={`tool-call-status ${statusClass}`}>
+                  {statusLabel}
+                </span>
+              </div>
+            );
+          }
+
           // Find the last assistant message that actually has content
           const isLastNonEmptyAssistant =
             entry.role === "assistant" &&

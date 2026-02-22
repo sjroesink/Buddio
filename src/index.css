@@ -225,6 +225,89 @@ body,
 .permission-btn-deny:hover:not(:disabled) {
   background: rgba(248, 113, 113, 0.2);
 }
+
+.permission-status-badge {
+  margin-left: 8px;
+  padding: 1px 6px;
+  border-radius: 4px;
+  font-size: 10px;
+  font-weight: 700;
+  letter-spacing: 0.05em;
+  text-transform: uppercase;
+}
+.permission-status-pending {
+  background: rgba(250, 204, 21, 0.15);
+  color: rgba(250, 204, 21, 0.9);
+}
+
+.permission-command-preview {
+  margin-bottom: 8px;
+  padding: 6px 8px;
+  border-radius: 4px;
+  font-family: ui-monospace, SFMono-Regular, "SF Mono", Menlo, monospace;
+  font-size: 11px;
+  line-height: 1.4;
+  color: rgba(255, 255, 255, 0.7);
+  background: rgba(0, 0, 0, 0.2);
+  word-break: break-all;
+}
+
+/* Tool call entries in thread */
+.tool-call-entry {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  padding: 4px 10px;
+  margin-bottom: 4px;
+  font-size: 12px;
+  border-radius: 6px;
+  background: rgba(255, 255, 255, 0.03);
+  border: 1px solid rgba(255, 255, 255, 0.06);
+}
+.tool-call-title {
+  font-weight: 600;
+  color: rgba(255, 255, 255, 0.7);
+}
+.tool-call-command {
+  font-family: ui-monospace, SFMono-Regular, "SF Mono", Menlo, monospace;
+  font-size: 11px;
+  color: rgba(255, 255, 255, 0.5);
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+  flex: 1;
+  min-width: 0;
+}
+.tool-call-status {
+  padding: 1px 6px;
+  border-radius: 4px;
+  font-size: 10px;
+  font-weight: 700;
+  letter-spacing: 0.05em;
+  text-transform: uppercase;
+  flex-shrink: 0;
+}
+.tool-call-status-running {
+  background: rgba(96, 165, 250, 0.15);
+  color: rgba(96, 165, 250, 0.9);
+}
+.tool-call-status-pending {
+  background: rgba(250, 204, 21, 0.15);
+  color: rgba(250, 204, 21, 0.9);
+}
+.tool-call-status-approved {
+  background: rgba(74, 222, 128, 0.15);
+  color: rgba(74, 222, 128, 0.9);
+}
+.tool-call-status-completed {
+  background: rgba(74, 222, 128, 0.15);
+  color: rgba(74, 222, 128, 0.9);
+}
+.tool-call-status-error {
+  background: rgba(248, 113, 113, 0.15);
+  color: rgba(248, 113, 113, 0.9);
+}
+
 /* Agent settings overlay */
 .agent-settings-overlay {
   position: absolute;
