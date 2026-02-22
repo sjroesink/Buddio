@@ -381,9 +381,6 @@ impl AcpManager {
         launch_context: &crate::context::LaunchContext,
         slash_commands: &[SlashCommand],
     ) -> Result<(), String> {
-        let session_id = self.session_id.clone().ok_or("Not connected to agent")?;
-        let prompt_tx = self.prompt_tx.as_ref().ok_or("Not connected to agent")?;
-
         let prompt_text = build_agent_prompt(
             query,
             context_items,
@@ -394,6 +391,23 @@ impl AcpManager {
             launch_context,
             slash_commands,
         );
+        self.send_prompt(prompt_text)
+    }
+
+    pub async fn prompt_slash_command(
+        &mut self,
+        query: &str,
+        memories: &[Memory],
+        slash_commands: &[SlashCommand],
+    ) -> Result<(), String> {
+        let prompt_text = build_slash_command_prompt(query, memories, slash_commands);
+        self.send_prompt(prompt_text)
+    }
+
+    fn send_prompt(&self, prompt_text: String) -> Result<(), String> {
+        let session_id = self.session_id.clone().ok_or("Not connected to agent")?;
+        let prompt_tx = self.prompt_tx.as_ref().ok_or("Not connected to agent")?;
+
         let content = vec![ContentBlock::Text(TextContent::new(prompt_text))];
 
         prompt_tx
@@ -582,6 +596,122 @@ fn resolve_binary_path(binary: &str, agent_id: &str) -> String {
     binary.to_string()
 }
 
+/// Build a focused prompt for the slash command creation agent.
+/// This agent's sole purpose is to collaborate with the user to create a script,
+/// register it as a slash command, and execute it.
+fn build_slash_command_prompt(
+    query: &str,
+    memories: &[Memory],
+    slash_commands: &[SlashCommand],
+) -> String {
+    let cli = resolve_cli_path();
+    let slash_dir = golaunch_core::Database::slash_commands_dir()
+        .unwrap_or_else(|_| "slash-commands".into())
+        .to_string_lossy()
+        .to_string();
+
+    let mut p = String::with_capacity(2048);
+
+    // ── System instructions ──
+    p.push_str(
+        "You are GoLaunch Slash Command Builder — a dedicated agent for creating and executing \
+         user-defined slash commands. The user typed a slash command that doesn't exist yet.\n\n\
+         Your ONLY job:\n\
+         1. Figure out what the script should do based on the command name and arguments.\n\
+            For example: `/kill 4924` → a script that kills the process running on port 4924.\n\
+         2. Briefly confirm with the user what the script will do.\n\
+         3. Write the script file to the slash-commands directory.\n\
+         4. Register it with the CLI using `slash-commands add`.\n\
+         5. Execute it immediately using `slash-commands run`.\n\n\
+         Guidelines:\n\
+         - Be smart about inferring the purpose from the command name — the user expects you to understand.\n\
+         - Be concise — the user is in a launcher and wants quick results.\n\
+         - Make scripts robust: validate arguments, handle errors, produce clear output.\n\
+         - If the purpose is ambiguous, ask ONE clarifying question, then proceed.\n\
+         - After creating and executing, briefly confirm what happened.\n\n",
+    );
+
+    // ── Platform info ──
+    if cfg!(target_os = "windows") {
+        p.push_str(
+            "## Platform\n\
+             Windows — write PowerShell scripts (`.ps1`). Arguments are passed as positional \
+             params (`$args[0]`, `$args[1]`, etc.).\n\n",
+        );
+    } else if cfg!(target_os = "macos") {
+        p.push_str(
+            "## Platform\n\
+             macOS — write Bash scripts (`.sh`). Arguments are passed as `$1`, `$2`, etc. \
+             Make sure to add `#!/bin/bash` as the first line.\n\n",
+        );
+    } else {
+        p.push_str(
+            "## Platform\n\
+             Linux — write Bash scripts (`.sh`). Arguments are passed as `$1`, `$2`, etc. \
+             Make sure to add `#!/bin/bash` as the first line.\n\n",
+        );
+    }
+
+    // ── CLI reference (slash commands only) ──
+    p.push_str(&format!(
+        "## CLI Reference\n\
+         Binary: `{cli}`\n\
+         Script storage directory: `{slash_dir}`\n\n\
+         ```bash\n\
+         # List all slash commands\n\
+         \"{cli}\" slash-commands list --json\n\n\
+         # Register a new slash command\n\
+         \"{cli}\" slash-commands add --name \"kill\" --description \"Kill process on port\" --script-path \"{slash_dir}/kill.ps1\"\n\n\
+         # Run a slash command with arguments\n\
+         \"{cli}\" slash-commands run --name \"kill\" --args \"4924\"\n\n\
+         # Get a slash command by name\n\
+         \"{cli}\" slash-commands get --name \"kill\"\n\n\
+         # Remove a slash command\n\
+         \"{cli}\" slash-commands remove --name \"kill\"\n\
+         ```\n\n\
+         Workflow: first write the script file to disk, then register with `slash-commands add`, \
+         then execute with `slash-commands run`.\n\n"
+    ));
+
+    // ── User memory / preferences ──
+    if !memories.is_empty() {
+        p.push_str("## User Preferences\n");
+        for mem in memories {
+            let ctx = mem
+                .context
+                .as_deref()
+                .map(|c| format!(" (context: {c})"))
+                .unwrap_or_default();
+            p.push_str(&format!(
+                "- {}: {}{} [type: {}]\n",
+                mem.key, mem.value, ctx, mem.memory_type
+            ));
+        }
+        p.push('\n');
+    }
+
+    // ── Registered slash commands ──
+    if !slash_commands.is_empty() {
+        p.push_str("## Existing Slash Commands\n");
+        p.push_str("These already exist — avoid name collisions:\n");
+        for cmd in slash_commands {
+            p.push_str(&format!(
+                "- **/{name}**: {desc} (script: `{path}`, used {count} times)\n",
+                name = cmd.name,
+                desc = cmd.description,
+                path = cmd.script_path,
+                count = cmd.usage_count,
+            ));
+        }
+        p.push('\n');
+    }
+
+    // ── User query ──
+    p.push_str(&format!("## User Query\n{query}\n"));
+
+    p
+}
+
 /// Build a structured prompt for the ACP agent that includes system instructions,
 /// CLI reference, user context, and the query.
 fn build_agent_prompt(
@@ -597,10 +727,6 @@ fn build_agent_prompt(
     let cli = resolve_cli_path();
     let db_path = golaunch_core::Database::db_path()
         .unwrap_or_else(|_| "golaunch.db".into())
-        .to_string_lossy()
-        .to_string();
-    let slash_dir = golaunch_core::Database::slash_commands_dir()
-        .unwrap_or_else(|_| "slash-commands".into())
         .to_string_lossy()
         .to_string();
 
@@ -641,22 +767,7 @@ fn build_agent_prompt(
            If it's HTML, return HTML. Never add markdown formatting (like ```), headers, or bullet points \
            unless the original selected text already uses that format. Your output will be pasted directly \
            in place of the selection, so it must be in the same format.\n\
-         - When working with selected text, consider the source application for appropriate formatting.\n\n\
-         CRITICAL — Slash Command Detection:\n\
-         - If the user query starts with `/` (e.g., `/kill 3900`, `/deploy staging`), this is ALWAYS a \
-           slash command request. NEVER execute it as a direct action.\n\
-         - Instead, ALWAYS follow the slash command creation workflow:\n\
-           1. Infer what the script should do from the command name and arguments \
-              (e.g., `/kill 3900` → kill the process running on port 3900).\n\
-           2. Briefly tell the user what you'll create (e.g., \"I'll create a `/kill` slash command that \
-              kills the process on a given port.\").\n\
-           3. Write the script file to the slash-commands directory.\n\
-           4. Register it with `slash-commands add`.\n\
-           5. Execute it immediately with `slash-commands run`.\n\
-         - Be smart about inferring the purpose from the name: `/kill` → kill process on port, \
-           `/open` → open a URL or app, `/deploy` → deploy to environment, etc.\n\
-         - NEVER just run the action directly (e.g., don't just run a kill command). ALWAYS create a \
-           reusable slash command script first so the user can reuse it.\n\n",
+         - When working with selected text, consider the source application for appropriate formatting.\n\n",
     );
 
     // ── CLI Reference ──
@@ -721,37 +832,8 @@ fn build_agent_prompt(
          Use conversation commands to recall earlier discussions with the user.\n\n\
          ### Slash Commands\n\
          Slash commands are user-defined scripts invoked with `/name args...` from the launcher.\n\
-         When the user query starts with `/`, it is ALWAYS a slash command request — never treat it as a regular query.\n\n\
-         Your MANDATORY workflow when receiving a `/command args` query:\n\
-         1. Infer what the script should do from the command name and arguments.\n\
-            Be smart: `/kill 4924` → kill process on port 4924, `/open github` → open github.com, etc.\n\
-         2. Briefly tell the user what you'll create (1-2 sentences max).\n\
-         3. Write the script file to the slash-commands directory.\n\
-         4. Register it with the CLI using `slash-commands add`.\n\
-         5. Execute it immediately using `slash-commands run`.\n\
-         NEVER skip steps 3-4. ALWAYS create a reusable script, never just run the action directly.\n\n\
-         Script storage directory: `{slash_dir}`\n\
-         Scripts: `.ps1` (PowerShell) on Windows, `.sh` (Bash) on Unix/macOS.\n\n\
-         ```bash\n\
-         # List all slash commands\n\
-         \"{cli}\" slash-commands list --json\n\n\
-         # Register a new slash command\n\
-         \"{cli}\" slash-commands add --name \"kill\" --description \"Kill process on port\" --script-path \"{slash_dir}/kill.ps1\"\n\n\
-         # Run a slash command with arguments\n\
-         \"{cli}\" slash-commands run --name \"kill\" --args \"4924\"\n\n\
-         # Get a slash command by name\n\
-         \"{cli}\" slash-commands get --name \"kill\"\n\n\
-         # Remove a slash command\n\
-         \"{cli}\" slash-commands remove --name \"kill\"\n\
-         ```\n\n\
-         IMPORTANT for creating slash commands:\n\
-         - First write the script file to disk (use your file-writing / shell capabilities).\n\
-         - Then register it with `slash-commands add --name ... --description ... --script-path ...`.\n\
-         - Then execute it with `slash-commands run --name ... --args ...`.\n\
-         - On Windows: write PowerShell scripts (.ps1). Arguments are passed as positional params ($args[0], $args[1], etc.).\n\
-         - On Unix: write Bash scripts (.sh). Arguments are passed as $1, $2, etc.\n\
-         - Make scripts robust: validate arguments, handle errors, produce clear output.\n\
-         - Be smart about what the script should do based on the command name — the user expects you to infer the purpose.\n\n"
+         Creation of new slash commands is handled by a dedicated agent — you do not need to create them.\n\
+         You can reference existing slash commands listed below for context.\n\n"
     ));
 
     // ── User memory / preferences ──

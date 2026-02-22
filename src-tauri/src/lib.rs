@@ -34,6 +34,7 @@ pub fn run() {
             acp_disconnect,
             acp_get_status,
             acp_prompt,
+            acp_prompt_slash_command,
             acp_cancel,
             acp_resolve_permission,
             acp_get_config_options,

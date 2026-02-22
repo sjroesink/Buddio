@@ -264,75 +264,101 @@ export function useAcpAgent() {
     }
   }, []);
 
-  const prompt = useCallback(async (query: string) => {
-    const normalizedQuery = query.trim();
-    if (!normalizedQuery) return;
+  const startTurn = useCallback(
+    async (
+      query: string,
+      invokeCommand: (normalizedQuery: string) => Promise<void>,
+    ) => {
+      const normalizedQuery = query.trim();
+      if (!normalizedQuery) return;
 
-    const assistantId = makeMessageId("assistant");
+      const assistantId = makeMessageId("assistant");
 
-    // Create conversation if none active
-    let convId = activeConversationIdRef.current;
-    if (!convId) {
-      try {
-        const title =
-          normalizedQuery.length > 50
-            ? normalizedQuery.slice(0, 50) + "..."
-            : normalizedQuery;
-        const conv = await invoke<{ id: string }>("create_conversation", {
-          title,
-        });
-        convId = conv.id;
-        setActiveConversationId(convId);
-      } catch (e) {
-        console.error("Failed to create conversation:", e);
+      // Create conversation if none active
+      let convId = activeConversationIdRef.current;
+      if (!convId) {
+        try {
+          const title =
+            normalizedQuery.length > 50
+              ? normalizedQuery.slice(0, 50) + "..."
+              : normalizedQuery;
+          const conv = await invoke<{ id: string }>("create_conversation", {
+            title,
+          });
+          convId = conv.id;
+          setActiveConversationId(convId);
+        } catch (e) {
+          console.error("Failed to create conversation:", e);
+        }
       }
-    }
 
-    // Persist user message
-    if (convId) {
-      invoke("add_conversation_message", {
-        conversationId: convId,
-        role: "user",
-        content: normalizedQuery,
-      }).catch(() => {});
-    }
+      // Persist user message
+      if (convId) {
+        invoke("add_conversation_message", {
+          conversationId: convId,
+          role: "user",
+          content: normalizedQuery,
+        }).catch(() => {});
+      }
 
-    setThread((prev) => [
-      ...prev,
-      { id: makeMessageId("user"), role: "user", content: normalizedQuery },
-      { id: assistantId, role: "assistant", content: "" },
-    ]);
+      setThread((prev) => [
+        ...prev,
+        { id: makeMessageId("user"), role: "user", content: normalizedQuery },
+        { id: assistantId, role: "assistant", content: "" },
+      ]);
 
-    activeAssistantIdRef.current = assistantId;
-    setMessages("");
-    setThoughts("");
-    setTurnActive(true);
-    setIsThinking(true);
+      activeAssistantIdRef.current = assistantId;
+      setMessages("");
+      setThoughts("");
+      setTurnActive(true);
+      setIsThinking(true);
 
-    try {
-      const items = await invoke("get_all_items");
-      await invoke("acp_prompt", {
-        query: normalizedQuery,
-        contextItems: items,
+      try {
+        await invokeCommand(normalizedQuery);
+      } catch (e) {
+        console.error("Failed to prompt agent:", e);
+        setTurnActive(false);
+        setIsThinking(false);
+        activeAssistantIdRef.current = null;
+        setThread((prev) =>
+          prev.map((entry) =>
+            entry.id === assistantId && entry.content.length === 0
+              ? {
+                  ...entry,
+                  content:
+                    "I hit an error while sending that. Please try again.",
+                }
+              : entry,
+          ),
+        );
+      }
+    },
+    [],
+  );
+
+  const prompt = useCallback(
+    async (query: string) => {
+      await startTurn(query, async (normalizedQuery) => {
+        const items = await invoke("get_all_items");
+        await invoke("acp_prompt", {
+          query: normalizedQuery,
+          contextItems: items,
+        });
       });
-    } catch (e) {
-      console.error("Failed to prompt agent:", e);
-      setTurnActive(false);
-      setIsThinking(false);
-      activeAssistantIdRef.current = null;
-      setThread((prev) =>
-        prev.map((entry) =>
-          entry.id === assistantId && entry.content.length === 0
-            ? {
-                ...entry,
-                content:
-                  "I hit an error while sending that. Please try again.",
-              }
-            : entry,
-        ),
-      );
-    }
-  }, []);
+    },
+    [startTurn],
+  );
+
+  const promptSlashCommand = useCallback(
+    async (query: string) => {
+      await startTurn(query, async (normalizedQuery) => {
+        await invoke("acp_prompt_slash_command", {
+          query: normalizedQuery,
+        });
+      });
+    },
+    [startTurn],
+  );
 
   const cancel = useCallback(async () => {
     try {
@@ -485,6 +511,7 @@ export function useAcpAgent() {
     connect,
     disconnect,
     prompt,
+    promptSlashCommand,
     cancel,
     clearThread,
     resolvePermission,

@@ -470,6 +470,22 @@ pub async fn acp_prompt(
 }
 
 #[tauri::command]
+pub async fn acp_prompt_slash_command(
+    state: tauri::State<'_, AcpState>,
+    query: String,
+) -> Result<(), String> {
+    let db = Database::new()?;
+
+    let memories = db.get_relevant_memories(None).unwrap_or_default();
+    let slash_commands = db.list_slash_commands().unwrap_or_default();
+
+    let mut manager = state.inner().0.lock().await;
+    manager
+        .prompt_slash_command(&query, &memories, &slash_commands)
+        .await
+}
+
+#[tauri::command]
 pub async fn acp_cancel(state: tauri::State<'_, AcpState>) -> Result<(), String> {
     let mut manager = state.inner().0.lock().await;
     manager.cancel().await
