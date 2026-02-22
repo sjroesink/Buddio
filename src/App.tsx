@@ -34,6 +34,7 @@ function App() {
     agentStatus: agent.status,
     agentAutoFallback: autoFallback,
     onAgentPrompt: agent.prompt,
+    onSlashCommandCreate: agent.promptSlashCommand,
     onAgentCancel: agent.cancel,
     agentTurnActive: agent.turnActive,
   });

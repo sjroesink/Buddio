@@ -6,6 +6,7 @@ interface UseLauncherOptions {
   agentStatus: AgentStatus;
   agentAutoFallback: boolean;
   onAgentPrompt: (query: string) => void;
+  onSlashCommandCreate: (query: string) => void;
   onAgentCancel: () => void;
   agentTurnActive: boolean;
 }
@@ -124,9 +125,9 @@ export function useLauncher(options: UseLauncherOptions) {
         await invoke<string>("execute_slash_command", { name, args });
         await invoke("hide_window");
       } catch (err: unknown) {
-        // Command not found -> send to agent
+        // Command not found -> send to slash command agent
         if (typeof err === "string" && err.includes("not found")) {
-          options.onAgentPrompt(`/${name} ${args}`.trim());
+          options.onSlashCommandCreate(`/${name} ${args}`.trim());
         } else {
           console.error("Slash command failed:", err);
         }
@@ -271,8 +272,8 @@ export function useLauncher(options: UseLauncherOptions) {
               setQueryState(`/${selected.name} `);
             }
           } else {
-            // No matching slash command — send to agent for creation
-            options.onAgentPrompt(query);
+            // No matching slash command — send to slash command agent for creation
+            options.onSlashCommandCreate(query);
           }
         }
         return;
