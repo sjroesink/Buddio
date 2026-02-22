@@ -1,0 +1,17 @@
+[package]
+name = "golaunch-mcp"
+version = "0.1.0"
+edition = "2021"
+description = "MCP server for GoLaunch - exposes launcher data to AI assistants"
+
+[[bin]]
+name = "golaunch-mcp"
+path = "src/main.rs"
+
+[dependencies]
+golaunch-core = { path = "../golaunch-core" }
+rmcp = { version = "0.16", features = ["server", "transport-io", "macros"] }
+tokio = { version = "1", features = ["full"] }
+serde = { version = "1", features = ["derive"] }
+serde_json = "1"
+open = "5"
