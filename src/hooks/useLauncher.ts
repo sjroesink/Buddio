@@ -186,6 +186,7 @@ export function useLauncher(options: UseLauncherOptions) {
         // Command not found -> send to slash command agent
         if (typeof err === "string" && err.includes("not found")) {
           options.onSlashCommandCreate(`/${name} ${args}`.trim());
+          setQueryState("");
         } else {
           console.error("Slash command failed:", err);
         }
@@ -439,6 +440,7 @@ export function useLauncher(options: UseLauncherOptions) {
         e.preventDefault();
         setAgentModeConfirmed(true);
         options.onAgentPrompt(query);
+        setQueryState("");
         return;
       }
 
