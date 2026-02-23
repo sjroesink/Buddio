@@ -16,7 +16,7 @@ import ParameterHint from "./components/ParameterHint";
 import ConversationHistory from "./components/ConversationHistory";
 import { RewriteQuickActions } from "./components/RewriteQuickActions";
 import { Toast, type ToastData } from "./components/Toast";
-import type { AgentConfig, LaunchItem } from "./types";
+import type { AgentConfig } from "./types";
 
 function App() {
   const [settingsOpen, setSettingsOpen] = useState(false);
@@ -25,10 +25,8 @@ function App() {
   const [forceAgentMode, setForceAgentMode] = useState(false);
   const [historySelectedIndex, setHistorySelectedIndex] = useState(0);
   const [rewriteSelectedIndex, setRewriteSelectedIndex] = useState(0);
-  const [newlyCreatedItems, setNewlyCreatedItems] = useState<LaunchItem[]>([]);
   const [toast, setToast] = useState<ToastData | null>(null);
   const containerRef = useRef<HTMLDivElement>(null);
-  const itemIdsBeforeTurnRef = useRef<Set<string>>(new Set());
 
   const agent = useAcpAgent();
   const launchCtx = useLaunchContext();
@@ -154,18 +152,22 @@ function App() {
     launcher.refresh();
   }, [agent, launcher]);
 
-  const handleExecuteItem = useCallback(
-    async (itemId: string) => {
-      try {
-        await invoke("execute_item", { id: itemId });
-        setToast({ message: "Launched", type: "success" });
-        await invoke("hide_window");
-      } catch (e) {
-        console.error("Failed to execute item:", e);
-        setToast({ message: String(e), type: "error" });
-      }
+  const handleExecuteSlashCommand = useCallback(
+    async (name: string) => {
+      await invoke("execute_slash_command", { name, args: "" });
+      setToast({ message: "Executed", type: "success" });
+      await invoke("hide_window");
     },
     [],
+  );
+
+  const handleExecuteSlashCommandError = useCallback(
+    (error: string) => {
+      setToast({ message: error, type: "error" });
+      // Feed the error back to the agent session
+      agent.prompt(`The command failed with error: ${error}`);
+    },
+    [agent],
   );
 
   const handleRewriteQuickAction = useCallback(
@@ -211,25 +213,11 @@ function App() {
     }).catch(() => {});
   }, [showOnlySearch, settingsOpen, windowAnchor]);
 
-  // Snapshot item IDs when agent turn starts, detect new items when it ends
+  // Refresh search results when agent turn ends (agent may have added/removed items)
   const prevTurnActiveRef = useRef(false);
   useEffect(() => {
-    if (agent.turnActive && !prevTurnActiveRef.current) {
-      // Turn just started — snapshot current item IDs
-      const ids = new Set(launcher.items.map((item) => item.id));
-      itemIdsBeforeTurnRef.current = ids;
-      setNewlyCreatedItems([]);
-    }
     if (!agent.turnActive && prevTurnActiveRef.current) {
-      // Turn just ended — check for newly created items
-      invoke<LaunchItem[]>("search_items", { query: "" }).then((allItems) => {
-        const before = itemIdsBeforeTurnRef.current;
-        const created = allItems.filter((item) => !before.has(item.id));
-        setNewlyCreatedItems(created);
-        if (created.length > 0) {
-          launcher.refresh();
-        }
-      }).catch(() => {});
+      launcher.refresh();
     }
     prevTurnActiveRef.current = agent.turnActive;
   }, [agent.turnActive, launcher]);
@@ -365,8 +353,8 @@ function App() {
               onNewConversation={handleNewConversation}
               onShowHistory={handleShowHistory}
               hasSelection={launchCtx.hasSelection}
-              newlyCreatedItems={newlyCreatedItems}
-              onExecuteItem={handleExecuteItem}
+              onExecuteSlashCommand={handleExecuteSlashCommand}
+              onExecuteSlashCommandError={handleExecuteSlashCommandError}
               onReplaceSelection={async (text) => {
                 try {
                   await launchCtx.replaceSelection(text);

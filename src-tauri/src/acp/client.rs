@@ -213,10 +213,19 @@ impl Client for GoLaunchClient {
                 }
             }
             SessionUpdate::ToolCall(tc) => {
+                let content_text = tc.content.iter().find_map(|c| {
+                    if let agent_client_protocol::ToolCallContent::Content(inner) = c {
+                        if let ContentBlock::Text(t) = &inner.content {
+                            return Some(t.text.clone());
+                        }
+                    }
+                    None
+                });
                 let _ = self.update_tx.send(AgentUpdate::ToolCall {
                     id: tc.tool_call_id.to_string(),
                     title: tc.title.clone(),
                     kind: format!("{:?}", tc.kind),
+                    content: content_text,
                 });
             }
             SessionUpdate::ToolCallUpdate(tcu) => {

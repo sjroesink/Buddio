@@ -292,20 +292,39 @@ body,
   border-radius: 6px;
   background: rgba(255, 255, 255, 0.03);
   border: 1px solid rgba(255, 255, 255, 0.06);
+  cursor: pointer;
+}
+.tool-call-entry.tool-call-no-expand {
+  cursor: default;
+}
+.tool-call-chevron {
+  font-size: 8px;
+  color: rgba(255, 255, 255, 0.4);
+  width: 12px;
+  flex-shrink: 0;
 }
 .tool-call-title {
   font-weight: 600;
   color: rgba(255, 255, 255, 0.7);
-}
-.tool-call-command {
-  font-family: ui-monospace, SFMono-Regular, "SF Mono", Menlo, monospace;
-  font-size: 11px;
-  color: rgba(255, 255, 255, 0.5);
-  overflow: hidden;
-  text-overflow: ellipsis;
-  white-space: nowrap;
   flex: 1;
   min-width: 0;
+}
+.tool-call-details {
+  margin: 0 10px 4px 28px;
+  padding: 6px 8px;
+  background: rgba(0, 0, 0, 0.25);
+  border: 1px solid rgba(255, 255, 255, 0.06);
+  border-radius: 4px;
+  font-family: ui-monospace, SFMono-Regular, "SF Mono", Menlo, monospace;
+  font-size: 11px;
+  color: rgba(255, 255, 255, 0.6);
+  max-height: 200px;
+  overflow-y: auto;
+}
+.tool-call-details pre {
+  white-space: pre-wrap;
+  word-break: break-all;
+  margin: 0;
 }
 .tool-call-status {
   padding: 1px 6px;

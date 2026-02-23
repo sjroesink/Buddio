@@ -71,20 +71,29 @@ export function useAcpAgent() {
           setThoughts((prev) => prev + update.text);
           setIsThinking(true);
           break;
-        case "tool_call":
+        case "tool_call": {
           setIsThinking(true);
-          // Add tool call entry to the thread
-          setThread((prev) => [
-            ...prev,
-            {
-              id: `tool-${update.id}`,
-              role: "tool",
-              content: "",
-              toolTitle: update.title ?? "Tool",
-              toolStatus: "running",
-            },
-          ]);
+          // Close current assistant message so subsequent text goes to a new one
+          activeAssistantIdRef.current = null;
+          // Add tool call entry + new assistant message for chronological interleaving
+          setThread((prev) => {
+            const newAssistantId = makeMessageId("assistant");
+            activeAssistantIdRef.current = newAssistantId;
+            return [
+              ...prev,
+              {
+                id: `tool-${update.id}`,
+                role: "tool" as const,
+                content: "",
+                toolTitle: update.title ?? "Tool",
+                toolStatus: "running" as const,
+                toolContent: update.content ?? undefined,
+              },
+              { id: newAssistantId, role: "assistant" as const, content: "" },
+            ];
+          });
           break;
+        }
         case "tool_call_update": {
           // Update existing tool call entry status
           const toolEntryId = `tool-${update.id}`;
@@ -112,19 +121,19 @@ export function useAcpAgent() {
           setTurnActive(false);
           setIsThinking(false);
 
-          // Persist the assistant's final message to the database
+          // Persist combined assistant messages to the database
           const convId = activeConversationIdRef.current;
           const currentThread = threadRef.current;
-          const assistantId = activeAssistantIdRef.current;
-          if (convId && assistantId) {
-            const assistantMsg = currentThread.find(
-              (m) => m.id === assistantId,
-            );
-            if (assistantMsg && assistantMsg.content.length > 0) {
+          if (convId) {
+            const combinedContent = currentThread
+              .filter((m) => m.role === "assistant" && m.content.length > 0)
+              .map((m) => m.content)
+              .join("\n\n");
+            if (combinedContent.length > 0) {
               invoke("add_conversation_message", {
                 conversationId: convId,
                 role: "assistant",
-                content: assistantMsg.content,
+                content: combinedContent,
               }).catch(() => {});
             }
           }

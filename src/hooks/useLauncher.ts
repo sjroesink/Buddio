@@ -364,6 +364,7 @@ export function useLauncher(options: UseLauncherOptions) {
             } else {
               // No matching slash command — send to slash command agent for creation
               options.onSlashCommandCreate(query);
+              setQueryState("");
             }
           }
         }

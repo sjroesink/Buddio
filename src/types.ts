@@ -20,7 +20,7 @@ export type AgentStatus = "disconnected" | "connecting" | "connected" | "error";
 export type AgentUpdate =
   | { type: "message_chunk"; text: string }
   | { type: "thought_chunk"; text: string }
-  | { type: "tool_call"; id: string; title: string; kind: string }
+  | { type: "tool_call"; id: string; title: string; kind: string; content: string | null }
   | {
       type: "tool_call_update";
       id: string;
@@ -38,6 +38,7 @@ export interface AgentThreadMessage {
   // Tool call fields (only when role === "tool")
   toolTitle?: string;
   toolStatus?: "pending" | "approved" | "running" | "completed" | "error";
+  toolContent?: string;
   commandPreview?: string;
 }
 

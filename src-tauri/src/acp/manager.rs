@@ -656,8 +656,8 @@ fn build_slash_command_prompt(
             - If the user says no or asks for changes, revise and show the preview again.\n\
             - CRITICAL: Do NOT call `slash_commands_add` until the user explicitly confirms.\n\
          4. After confirmation, call `slash_commands_add` with the script and parameter definitions.\n\
-         5. Call `slash_commands_run` to execute it (if arguments were provided).\n\
-         6. Briefly confirm what happened. STOP — do not do anything else.\n\n\
+         5. Briefly confirm the command was created. STOP — do NOT execute the command yourself.\n\
+            The GoLaunch UI will provide an execute button to the user.\n\n\
          Guidelines:\n\
          - Be smart about inferring the purpose from the command name — the user expects you to understand.\n\
          - Be concise — the user is in a launcher and wants quick results.\n\
@@ -702,9 +702,8 @@ fn build_slash_command_prompt(
          - `slash_commands_list` — List all registered slash commands\n\
          - `slash_commands_search` — Search slash commands by name or description\n\
          - `slash_commands_remove` — Remove a slash command by name\n\
-         - `slash_commands_run` — Execute a slash command by name with optional args\n\
          - `slash_commands_get_params` — Get parameter definitions for a slash command by name\n\n\
-         Workflow: show a preview and wait for user approval, then call `slash_commands_add` with the script contents and params, then execute with `slash_commands_run`.\n\n"
+         Workflow: show a preview and wait for user approval, then call `slash_commands_add` with the script contents and params. Do NOT execute the command — the UI handles that.\n\n"
     ));
 
     // ── User memory / preferences ──
