@@ -130,6 +130,15 @@ export interface SlashCommand {
   updated_at: string;
 }
 
+export interface SlashCommandParam {
+  id: string;
+  command_id: string;
+  name: string;
+  description: string;
+  position: number;
+  required: boolean;
+}
+
 // --- Conversation types ---
 
 export interface Conversation {

@@ -75,6 +75,7 @@ pub fn run() {
             add_slash_command,
             remove_slash_command,
             execute_slash_command,
+            get_slash_command_params,
         ])
         .setup(|app| {
             let handle = app.handle().clone();

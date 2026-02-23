@@ -1,6 +1,6 @@
 import { useState, useEffect, useCallback, useRef } from "react";
 import { invoke } from "@tauri-apps/api/core";
-import { LaunchItem, AgentStatus, CommandSuggestion, SlashCommand } from "../types";
+import { LaunchItem, AgentStatus, CommandSuggestion, SlashCommand, SlashCommandParam } from "../types";
 
 interface UseLauncherOptions {
   agentStatus: AgentStatus;
@@ -27,6 +27,10 @@ export function useLauncher(options: UseLauncherOptions) {
   const [savingCommand, setSavingCommand] = useState(false);
   const [slashCommands, setSlashCommands] = useState<SlashCommand[]>([]);
   const [selectedSlashIndex, setSelectedSlashIndex] = useState(0);
+  const [paramEntryMode, setParamEntryMode] = useState(false);
+  const [currentParamIndex, setCurrentParamIndex] = useState(0);
+  const [activeCommandParams, setActiveCommandParams] = useState<SlashCommandParam[]>([]);
+  const [activeCommandName, setActiveCommandName] = useState("");
   const debounceRef = useRef<ReturnType<typeof setTimeout>>();
   const queryBeforeSuggestionSelectRef = useRef<string | null>(null);
 
@@ -92,13 +96,20 @@ export function useLauncher(options: UseLauncherOptions) {
   // Slash mode: detect "/" prefix
   const isSlashMode = query.startsWith("/");
 
-  // Fetch slash commands when in slash mode
+  // Fetch slash commands when in slash mode (but not in param entry mode)
   useEffect(() => {
     if (!isSlashMode) {
       setSlashCommands([]);
       setSelectedSlashIndex(0);
+      setParamEntryMode(false);
+      setActiveCommandParams([]);
+      setActiveCommandName("");
+      setCurrentParamIndex(0);
       return;
     }
+
+    // Don't fetch command list while entering params
+    if (paramEntryMode) return;
 
     const afterSlash = query.slice(1);
     const nameFragment = afterSlash.split(/\s/)[0];
@@ -118,7 +129,17 @@ export function useLauncher(options: UseLauncherOptions) {
         })
         .catch(() => setSlashCommands([]));
     }
-  }, [query, isSlashMode]);
+  }, [query, isSlashMode, paramEntryMode]);
+
+  // Exit param entry mode if user backspaces past the space
+  useEffect(() => {
+    if (paramEntryMode && !query.includes(" ")) {
+      setParamEntryMode(false);
+      setActiveCommandParams([]);
+      setActiveCommandName("");
+      setCurrentParamIndex(0);
+    }
+  }, [query, paramEntryMode]);
 
   const parseSlashInput = useCallback(
     (input: string): { name: string; args: string } | null => {
@@ -136,10 +157,30 @@ export function useLauncher(options: UseLauncherOptions) {
     [],
   );
 
+  // Track current param index based on comma count
+  useEffect(() => {
+    if (!paramEntryMode) {
+      setCurrentParamIndex(0);
+      return;
+    }
+    const parsed = parseSlashInput(query);
+    if (!parsed) return;
+    const commaCount = (parsed.args.match(/,/g) || []).length;
+    setCurrentParamIndex(commaCount);
+  }, [query, paramEntryMode, parseSlashInput]);
+
   const executeSlashCommand = useCallback(
     async (name: string, args: string) => {
+      // Convert comma-separated args to space-separated for the backend
+      const normalizedArgs = args.includes(",")
+        ? args.split(",").map((s) => s.trim()).filter(Boolean).join(" ")
+        : args;
       try {
-        await invoke<string>("execute_slash_command", { name, args });
+        await invoke<string>("execute_slash_command", { name, args: normalizedArgs });
+        setParamEntryMode(false);
+        setActiveCommandParams([]);
+        setActiveCommandName("");
+        setCurrentParamIndex(0);
         await invoke("hide_window");
       } catch (err: unknown) {
         // Command not found -> send to slash command agent
@@ -283,32 +324,56 @@ export function useLauncher(options: UseLauncherOptions) {
 
   const handleKeyDown = useCallback(
     (e: React.KeyboardEvent) => {
-      // Slash command mode: Enter executes or autocompletes
+      // Slash command mode: Escape exits param entry mode
+      if (isSlashMode && paramEntryMode && e.key === "Escape") {
+        e.preventDefault();
+        setParamEntryMode(false);
+        setActiveCommandParams([]);
+        setCurrentParamIndex(0);
+        setQueryState(`/${activeCommandName}`);
+        setActiveCommandName("");
+        return;
+      }
+
+      // Slash command mode: Enter executes or enters param mode
       if (isSlashMode && e.key === "Enter") {
         e.preventDefault();
         const parsed = parseSlashInput(query);
         if (parsed && parsed.name) {
-          const hasArgs = query.includes(" ");
-          if (hasArgs) {
-            // User typed "/kill 4924" — execute directly
+          if (paramEntryMode) {
+            // In param entry mode — execute with comma-separated args
             executeSlashCommand(parsed.name, parsed.args);
-          } else if (slashCommands.length > 0) {
-            // User pressed Enter on a slash command from the list — autocomplete
-            const selected = slashCommands[selectedSlashIndex];
-            if (selected) {
-              setQueryState(`/${selected.name} `);
-            }
           } else {
-            // No matching slash command — send to slash command agent for creation
-            options.onSlashCommandCreate(query);
+            const hasArgs = query.includes(" ");
+            if (hasArgs) {
+              // User typed "/kill 4924" — execute directly
+              executeSlashCommand(parsed.name, parsed.args);
+            } else if (slashCommands.length > 0) {
+              // User pressed Enter on a slash command from the list — enter param entry mode
+              const selected = slashCommands[selectedSlashIndex];
+              if (selected) {
+                setQueryState(`/${selected.name} `);
+                setActiveCommandName(selected.name);
+                setParamEntryMode(true);
+                setCurrentParamIndex(0);
+                // Fetch params for this command
+                invoke<SlashCommandParam[]>("get_slash_command_params", { name: selected.name })
+                  .then((params) => setActiveCommandParams(params))
+                  .catch(() => setActiveCommandParams([]));
+              }
+            } else {
+              // No matching slash command — send to slash command agent for creation
+              options.onSlashCommandCreate(query);
+            }
           }
         }
         return;
       }
 
-      // Slash command mode: Arrow keys navigate list
+      // Slash command mode: Arrow keys navigate list (only when not in param entry mode)
       if (
         isSlashMode &&
+        !paramEntryMode &&
         slashCommands.length > 0 &&
         (e.key === "ArrowDown" || e.key === "ArrowUp")
       ) {
@@ -446,6 +511,8 @@ export function useLauncher(options: UseLauncherOptions) {
       selectedSlashIndex,
       parseSlashInput,
       executeSlashCommand,
+      paramEntryMode,
+      activeCommandName,
     ],
   );
 
@@ -462,6 +529,10 @@ export function useLauncher(options: UseLauncherOptions) {
     setSlashCommands([]);
     setSelectedSlashIndex(0);
     setAgentModeConfirmed(false);
+    setParamEntryMode(false);
+    setCurrentParamIndex(0);
+    setActiveCommandParams([]);
+    setActiveCommandName("");
     fetchItems("");
     fetchCategories();
   }, [fetchItems, fetchCategories, setQuery]);
@@ -493,5 +564,9 @@ export function useLauncher(options: UseLauncherOptions) {
     selectedSlashIndex,
     setSelectedSlashIndex,
     executeSlashCommand,
+    paramEntryMode,
+    currentParamIndex,
+    activeCommandParams,
+    activeCommandName,
   };
 }

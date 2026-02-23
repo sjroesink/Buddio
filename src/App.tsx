@@ -12,6 +12,7 @@ import { AgentResponse } from "./components/AgentResponse";
 import { AgentSettings } from "./components/AgentSettings";
 import CommandSuggestionPanel from "./components/CommandSuggestionPanel";
 import SlashCommandList from "./components/SlashCommandList";
+import ParameterHint from "./components/ParameterHint";
 import ConversationHistory from "./components/ConversationHistory";
 import { RewriteQuickActions } from "./components/RewriteQuickActions";
 import { Toast, type ToastData } from "./components/Toast";
@@ -434,8 +435,16 @@ function App() {
             />
           )}
 
+          {launcher.paramEntryMode && launcher.activeCommandParams.length > 0 && (
+            <ParameterHint
+              commandName={launcher.activeCommandName}
+              params={launcher.activeCommandParams}
+              currentIndex={launcher.currentParamIndex}
+            />
+          )}
+
           {hasQuery &&
-            (launcher.isSlashMode ? (
+            (launcher.isSlashMode && !launcher.paramEntryMode ? (
               <SlashCommandList
                 commands={launcher.slashCommands}
                 query={launcher.query}

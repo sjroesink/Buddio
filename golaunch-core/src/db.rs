@@ -1,7 +1,7 @@
 use crate::models::{
     CommandHistory, CommandSuggestion, Conversation, ConversationMessage, ConversationWithPreview,
     Item, Memory, NewCommandHistory, NewConversation, NewConversationMessage, NewItem, NewMemory,
-    NewSlashCommand, Setting, SlashCommand, UpdateItem,
+    NewSlashCommand, NewSlashCommandParam, Setting, SlashCommand, SlashCommandParam, UpdateItem,
 };
 use rusqlite::{params, Connection, Result as SqlResult};
 use std::path::PathBuf;
@@ -136,6 +136,16 @@ impl Database {
                 );
                 CREATE INDEX IF NOT EXISTS idx_slash_commands_name ON slash_commands(name);
                 CREATE INDEX IF NOT EXISTS idx_slash_commands_usage ON slash_commands(usage_count);
+
+                CREATE TABLE IF NOT EXISTS slash_command_params (
+                    id TEXT PRIMARY KEY,
+                    command_id TEXT NOT NULL REFERENCES slash_commands(id),
+                    name TEXT NOT NULL,
+                    description TEXT NOT NULL DEFAULT '',
+                    position INTEGER NOT NULL,
+                    required INTEGER NOT NULL DEFAULT 1
+                );
+                CREATE INDEX IF NOT EXISTS idx_slash_cmd_params_command_id ON slash_command_params(command_id);
                 ",
             )
             .map_err(|e| format!("Failed to initialize database: {e}"))
@@ -1158,6 +1168,13 @@ impl Database {
     }
 
     pub fn remove_slash_command_by_name(&self, name: &str) -> Result<bool, String> {
+        // Delete params first (no FK cascade in SQLite by default)
+        self.conn
+            .execute(
+                "DELETE FROM slash_command_params WHERE command_id = (SELECT id FROM slash_commands WHERE name = ?1)",
+                params![name],
+            )
+            .map_err(|e| format!("Failed to remove slash command params: {e}"))?;
         let rows = self
             .conn
             .execute("DELETE FROM slash_commands WHERE name = ?1", params![name])
@@ -1184,6 +1201,93 @@ impl Database {
             usage_count: row.get(4)?,
             created_at: row.get(5)?,
             updated_at: row.get(6)?,
+        })
+    }
+
+    // --- Slash Command Params ---
+
+    pub fn add_slash_command_params(
+        &self,
+        command_id: &str,
+        params: Vec<NewSlashCommandParam>,
+    ) -> Result<Vec<SlashCommandParam>, String> {
+        // Replace all existing params for this command
+        self.conn
+            .execute(
+                "DELETE FROM slash_command_params WHERE command_id = ?1",
+                params![command_id],
+            )
+            .map_err(|e| format!("Failed to clear existing params: {e}"))?;
+
+        for p in &params {
+            let id = Uuid::new_v4().to_string();
+            self.conn
+                .execute(
+                    "INSERT INTO slash_command_params (id, command_id, name, description, position, required)
+                     VALUES (?1, ?2, ?3, ?4, ?5, ?6)",
+                    params![id, command_id, p.name, p.description, p.position, p.required],
+                )
+                .map_err(|e| format!("Failed to add slash command param: {e}"))?;
+        }
+
+        self.get_slash_command_params(command_id)
+    }
+
+    pub fn get_slash_command_params(
+        &self,
+        command_id: &str,
+    ) -> Result<Vec<SlashCommandParam>, String> {
+        let mut stmt = self
+            .conn
+            .prepare(
+                "SELECT id, command_id, name, description, position, required
+                 FROM slash_command_params
+                 WHERE command_id = ?1
+                 ORDER BY position ASC",
+            )
+            .map_err(|e| format!("Failed to prepare query: {e}"))?;
+
+        let results = stmt
+            .query_map(params![command_id], Self::row_to_slash_command_param)
+            .map_err(|e| format!("Failed to execute query: {e}"))?
+            .collect::<SqlResult<Vec<SlashCommandParam>>>()
+            .map_err(|e| format!("Failed to collect results: {e}"))?;
+
+        Ok(results)
+    }
+
+    pub fn get_params_by_command_name(
+        &self,
+        name: &str,
+    ) -> Result<Vec<SlashCommandParam>, String> {
+        let mut stmt = self
+            .conn
+            .prepare(
+                "SELECT p.id, p.command_id, p.name, p.description, p.position, p.required
+                 FROM slash_command_params p
+                 JOIN slash_commands c ON c.id = p.command_id
+                 WHERE c.name = ?1
+                 ORDER BY p.position ASC",
+            )
+            .map_err(|e| format!("Failed to prepare query: {e}"))?;
+
+        let results = stmt
+            .query_map(params![name], Self::row_to_slash_command_param)
+            .map_err(|e| format!("Failed to execute query: {e}"))?
+            .collect::<SqlResult<Vec<SlashCommandParam>>>()
+            .map_err(|e| format!("Failed to collect results: {e}"))?;
+
+        Ok(results)
+    }
+
+    fn row_to_slash_command_param(row: &rusqlite::Row) -> rusqlite::Result<SlashCommandParam> {
+        Ok(SlashCommandParam {
+            id: row.get(0)?,
+            command_id: row.get(1)?,
+            name: row.get(2)?,
+            description: row.get(3)?,
+            position: row.get(4)?,
+            required: row.get(5)?,
         })
     }
 }

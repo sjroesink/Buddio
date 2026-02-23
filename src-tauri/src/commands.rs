@@ -2,7 +2,7 @@ use chrono::Timelike;
 use golaunch_core::{
     CommandHistory, CommandSuggestion, Conversation, ConversationMessage, ConversationWithPreview,
     Database, Item, Memory, NewCommandHistory, NewConversation, NewConversationMessage, NewItem,
-    NewMemory, NewSlashCommand, SlashCommand,
+    NewMemory, NewSlashCommand, SlashCommand, SlashCommandParam,
 };
 use std::collections::{HashMap, HashSet};
 use std::sync::Arc;
@@ -793,6 +793,12 @@ pub fn execute_slash_command(name: String, args: String) -> Result<String, Strin
     } else {
         Err(format!("Script failed:\n{stderr}\n{stdout}"))
     }
+}
+
+#[tauri::command]
+pub fn get_slash_command_params(name: String) -> Result<Vec<SlashCommandParam>, String> {
+    let db = Database::new()?;
+    db.get_params_by_command_name(&name)
 }
 
 // --- Per-agent env var commands ---
