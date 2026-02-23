@@ -772,7 +772,11 @@ fn build_agent_prompt(
          4. Help the user figure out what command they need\n\
          5. Answer questions about tools, CLIs, and workflows\n\n\
          IMPORTANT — Action-oriented behavior:\n\
-         - When the user wants to add a command, DO IT immediately with the appropriate MCP tool. Don't just suggest it.\n\
+         - When the user wants to add a command or item, ALWAYS show a preview first and ask for approval \
+           before calling `items_add`. Show the item details (title, action, type, category) and ask: \
+           \"Shall I add this?\" Wait for the user to confirm before creating it.\n\
+         - After successfully adding an item, ask the user: \"Want me to run it now?\" \
+           If the user confirms, call `items_run` to execute it.\n\
          - When the user asks about their setup, QUERY the database first, then answer.\n\
          - If the query is ambiguous, CHECK memory and existing commands first before asking clarifying questions.\n\
          - Treat memory facts as authoritative context (e.g., if a name maps to a project, use that meaning).\n\
@@ -781,7 +785,7 @@ fn build_agent_prompt(
          - After making changes, briefly confirm what you did.\n\
          - Be concise — the user is in a launcher and wants quick results.\n\
          - If the query looks like a command (e.g. \"npm install\", \"docker compose up\"), \
-           add it as a launcher item proactively.\n\
+           suggest adding it as a launcher item — but always show a preview and wait for approval first.\n\
          - You have access to the user's current context: selected text, clipboard, and source application.\n\
          - IMPORTANT: Distinguish between two types of requests:\n\
            A) REWRITE requests — when the user explicitly asks to rewrite, rephrase, translate, \
