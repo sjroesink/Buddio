@@ -15,6 +15,7 @@ import SlashCommandList from "./components/SlashCommandList";
 import ParameterHint from "./components/ParameterHint";
 import ConversationHistory from "./components/ConversationHistory";
 import { RewriteQuickActions } from "./components/RewriteQuickActions";
+import { CommandOutput } from "./components/CommandOutput";
 import { Toast, type ToastData } from "./components/Toast";
 import type { AgentConfig } from "./types";
 
@@ -26,14 +27,19 @@ function App() {
   const [historySelectedIndex, setHistorySelectedIndex] = useState(0);
   const [rewriteSelectedIndex, setRewriteSelectedIndex] = useState(0);
   const [toast, setToast] = useState<ToastData | null>(null);
+  const [commandOutput, setCommandOutput] = useState<string | null>(null);
   const containerRef = useRef<HTMLDivElement>(null);
 
   const agent = useAcpAgent();
   const launchCtx = useLaunchContext();
 
-  const handleExecuteSuccess = useCallback(async () => {
-    setToast({ message: "Launched", type: "success" });
-    await invoke("hide_window");
+  const handleExecuteSuccess = useCallback(async (output?: string | null) => {
+    if (output) {
+      setCommandOutput(output);
+    } else {
+      setToast({ message: "Launched", type: "success" });
+      await invoke("hide_window");
+    }
   }, []);
 
   const handleExecuteError = useCallback((error: string) => {
@@ -85,6 +91,7 @@ function App() {
       setHistorySelectedIndex(0);
       setRewriteSelectedIndex(0);
       setToast(null);
+      setCommandOutput(null);
       if (agent.turnActive) {
         agent.cancel();
       }
@@ -203,7 +210,8 @@ function App() {
     !launcher.isSlashMode &&
     !showAgentThread &&
     !showHistory &&
-    !showRewriteActions;
+    !showRewriteActions &&
+    !commandOutput;
   const windowAnchor = isAgentInputMode ? "bottom" : "top";
 
   useEffect(() => {
@@ -240,6 +248,14 @@ function App() {
 
   const handleContainerKeyDown = useCallback(
     (e: React.KeyboardEvent) => {
+      // Escape dismisses command output
+      if (commandOutput && e.key === "Escape") {
+        e.preventDefault();
+        setCommandOutput(null);
+        invoke("hide_window");
+        return;
+      }
+
       if (isAgentInputMode && e.key === "Enter") {
         if (showHistory) {
           // Enter in history mode loads the selected conversation
@@ -308,6 +324,7 @@ function App() {
       launcher.handleKeyDown(e);
     },
     [
+      commandOutput,
       isAgentInputMode,
       showHistory,
       showRewriteActions,
@@ -415,58 +432,70 @@ function App() {
             position="top"
           />
 
-          {showResults && launcher.categories.length > 0 && (
-            <CategoryBar
-              categories={launcher.categories}
-              activeCategory={launcher.activeCategory}
-              onCategoryChange={launcher.setActiveCategory}
+          {commandOutput ? (
+            <CommandOutput
+              output={commandOutput}
+              onDismiss={async () => {
+                setCommandOutput(null);
+                await invoke("hide_window");
+              }}
             />
-          )}
+          ) : (
+            <>
+              {showResults && launcher.categories.length > 0 && (
+                <CategoryBar
+                  categories={launcher.categories}
+                  activeCategory={launcher.activeCategory}
+                  onCategoryChange={launcher.setActiveCategory}
+                />
+              )}
 
-          {launcher.paramEntryMode && launcher.activeCommandParams.length > 0 && (
-            <ParameterHint
-              commandName={launcher.activeCommandName}
-              params={launcher.activeCommandParams}
-              currentIndex={launcher.currentParamIndex}
-            />
-          )}
+              {launcher.paramEntryMode && launcher.activeCommandParams.length > 0 && (
+                <ParameterHint
+                  commandName={launcher.activeCommandName}
+                  params={launcher.activeCommandParams}
+                  currentIndex={launcher.currentParamIndex}
+                />
+              )}
 
-          {hasQuery &&
-            (launcher.isSlashMode && !launcher.paramEntryMode ? (
-              <SlashCommandList
-                commands={launcher.slashCommands}
-                query={launcher.query}
-                selectedIndex={launcher.selectedSlashIndex}
-                onSelect={launcher.setSelectedSlashIndex}
-                onExecute={(cmd, args) =>
-                  launcher.executeSlashCommand(cmd.name, args)
-                }
-              />
-            ) : launcher.suggestions.length > 0 ? (
-              <CommandSuggestionPanel
-                suggestions={launcher.suggestions}
-                query={launcher.query}
-                selectedIndex={launcher.selectedSuggestionIndex}
-                onSelect={launcher.selectSuggestion}
-                onSave={launcher.saveCommandFromSuggestion}
-                saving={launcher.savingCommand}
-              />
-            ) : showResults ? (
-              <ItemList
-                items={launcher.items}
-                selectedIndex={launcher.selectedIndex}
-                onSelect={launcher.setSelectedIndex}
-                onExecute={launcher.executeSelected}
-              />
-            ) : null)}
+              {hasQuery &&
+                (launcher.isSlashMode && !launcher.paramEntryMode ? (
+                  <SlashCommandList
+                    commands={launcher.slashCommands}
+                    query={launcher.query}
+                    selectedIndex={launcher.selectedSlashIndex}
+                    onSelect={launcher.setSelectedSlashIndex}
+                    onExecute={(cmd, args) =>
+                      launcher.executeSlashCommand(cmd.name, args)
+                    }
+                  />
+                ) : launcher.suggestions.length > 0 ? (
+                  <CommandSuggestionPanel
+                    suggestions={launcher.suggestions}
+                    query={launcher.query}
+                    selectedIndex={launcher.selectedSuggestionIndex}
+                    onSelect={launcher.selectSuggestion}
+                    onSave={launcher.saveCommandFromSuggestion}
+                    saving={launcher.savingCommand}
+                  />
+                ) : showResults ? (
+                  <ItemList
+                    items={launcher.items}
+                    selectedIndex={launcher.selectedIndex}
+                    onSelect={launcher.setSelectedIndex}
+                    onExecute={launcher.executeSelected}
+                  />
+                ) : null)}
 
-          {(showResults || (hasQuery && launcher.suggestions.length > 0)) && (
-            <StatusBar
-              itemCount={launcher.items.length}
-              agentMode={launcher.agentMode}
-              agentTurnActive={agent.turnActive}
-              hasSuggestions={launcher.suggestions.length > 0}
-            />
+              {(showResults || (hasQuery && launcher.suggestions.length > 0)) && (
+                <StatusBar
+                  itemCount={launcher.items.length}
+                  agentMode={launcher.agentMode}
+                  agentTurnActive={agent.turnActive}
+                  hasSuggestions={launcher.suggestions.length > 0}
+                />
+              )}
+            </>
           )}
         </>
       )}

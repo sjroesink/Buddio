@@ -10,7 +10,7 @@ interface UseLauncherOptions {
   onAgentCancel: () => void;
   agentTurnActive: boolean;
   hasSelectedText?: boolean;
-  onExecuteSuccess?: () => void;
+  onExecuteSuccess?: (output?: string | null) => void;
   onExecuteError?: (error: string) => void;
 }
 
@@ -315,8 +315,8 @@ export function useLauncher(options: UseLauncherOptions) {
     const item = filteredItems[selectedIndex];
     if (!item) return;
     try {
-      await invoke("execute_item", { id: item.id });
-      options.onExecuteSuccess?.();
+      const output = await invoke<string | null>("execute_item", { id: item.id });
+      options.onExecuteSuccess?.(output);
     } catch (err) {
       console.error("Failed to execute item:", err);
       options.onExecuteError?.(String(err));

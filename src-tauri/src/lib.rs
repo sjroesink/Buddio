@@ -1,13 +1,13 @@
 mod acp;
 mod commands;
 mod context;
+pub mod hotkey;
 
 use commands::*;
 use context::LaunchContext;
 use std::env;
 use std::sync::{Arc, Mutex as StdMutex};
 use tauri::{Emitter, Manager, WindowEvent};
-use tauri_plugin_global_shortcut::{Code, GlobalShortcutExt, Modifiers, Shortcut, ShortcutState};
 use tokio::sync::Mutex;
 
 /// Returns true when GOLAUNCH_TEST=1 is set (used by E2E test harness).
@@ -19,6 +19,9 @@ use acp::manager::AcpManager;
 
 /// Shared state holding the most recent launch context.
 pub struct LaunchContextState(pub StdMutex<LaunchContext>);
+
+/// Shared state for the hotkey manager.
+pub struct HotkeyState(pub StdMutex<hotkey::HotkeyManager>);
 
 #[cfg_attr(mobile, tauri::mobile_entry_point)]
 pub fn run() {
@@ -76,6 +79,8 @@ pub fn run() {
             remove_slash_command,
             execute_slash_command,
             get_slash_command_params,
+            get_shortcut_mode,
+            set_shortcut_mode,
         ])
         .setup(|app| {
             let handle = app.handle().clone();
@@ -86,26 +91,18 @@ pub fn run() {
             // Initialize launch context state
             app.manage(LaunchContextState(StdMutex::new(LaunchContext::default())));
 
+            // Initialize hotkey manager state
+            let mut hotkey_mgr = hotkey::HotkeyManager::new();
+
             // In test mode, skip global shortcut registration and keep window visible
             if is_test_mode() {
+                app.manage(HotkeyState(StdMutex::new(hotkey_mgr)));
                 if let Some(window) = app.get_webview_window("main") {
                     let _ = window.show();
                     let _ = window.set_focus();
                 }
                 return Ok(());
             }
-
-            // Register global shortcut: Option+Space on macOS, Ctrl+Space on Windows/Linux
-            let shortcut = if cfg!(target_os = "macos") {
-                Shortcut::new(Some(Modifiers::ALT), Code::Space)
-            } else {
-                Shortcut::new(Some(Modifiers::CONTROL), Code::Space)
-            };
-            app.handle()
-                .plugin(tauri_plugin_global_shortcut::Builder::new().build())
-                .unwrap_or(());
-
-            let handle_clone = handle.clone();
 
             if let Some(window) = app.get_webview_window("main") {
                 let handle_on_close = handle.clone();
@@ -120,33 +117,13 @@ pub fn run() {
                 });
             }
 
-            app.global_shortcut()
-                .on_shortcut(shortcut, move |_app, _shortcut, event| {
-                    if event.state != ShortcutState::Pressed {
-                        return;
-                    }
+            // Load saved shortcut preference and activate
+            let saved_mode = hotkey::HotkeyManager::load_saved_mode();
+            hotkey_mgr
+                .activate(&handle, saved_mode)
+                .unwrap_or_else(|e| eprintln!("Failed to activate shortcut: {e}"));
 
-                    if let Some(window) = handle_clone.get_webview_window("main") {
-                        if window.is_visible().unwrap_or(false) {
-                            let _ = handle_clone.emit("launcher-reset", ());
-                            let _ = window.hide();
-                        } else {
-                            // Capture context BEFORE showing the launcher (while source app has focus)
-                            let ctx = context::capture_launch_context();
-                            if let Some(state) = handle_clone.try_state::<LaunchContextState>() {
-                                if let Ok(mut lock) = state.0.lock() {
-                                    *lock = ctx.clone();
-                                }
-                            }
-                            // Emit the context to the frontend
-                            let _ = handle_clone.emit("launch-context", &ctx);
-
-                            let _ = window.show();
-                            let _ = window.set_focus();
-                            let _ = window.center();
-                        }
-                    }
-                })?;
+            app.manage(HotkeyState(StdMutex::new(hotkey_mgr)));
 
             Ok(())
         })
