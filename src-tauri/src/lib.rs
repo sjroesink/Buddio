@@ -107,12 +107,21 @@ pub fn run() {
             if let Some(window) = app.get_webview_window("main") {
                 let handle_on_close = handle.clone();
                 window.on_window_event(move |event| {
-                    if let WindowEvent::CloseRequested { api, .. } = event {
-                        api.prevent_close();
-                        let _ = handle_on_close.emit("launcher-reset", ());
-                        if let Some(main) = handle_on_close.get_webview_window("main") {
-                            let _ = main.hide();
+                    match event {
+                        WindowEvent::CloseRequested { api, .. } => {
+                            api.prevent_close();
+                            let _ = handle_on_close.emit("launcher-reset", ());
+                            if let Some(main) = handle_on_close.get_webview_window("main") {
+                                let _ = main.hide();
+                            }
                         }
+                        WindowEvent::Focused(false) => {
+                            let _ = handle_on_close.emit("launcher-reset", ());
+                            if let Some(main) = handle_on_close.get_webview_window("main") {
+                                let _ = main.hide();
+                            }
+                        }
+                        _ => {}
                     }
                 });
             }
