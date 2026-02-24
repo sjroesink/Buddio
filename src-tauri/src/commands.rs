@@ -2,7 +2,7 @@ use chrono::Timelike;
 use golaunch_core::{
     CommandHistory, CommandSuggestion, Conversation, ConversationMessage, ConversationWithPreview,
     Database, Item, Memory, NewCommandHistory, NewConversation, NewConversationMessage, NewItem,
-    NewMemory, NewSlashCommand, SlashCommand,
+    NewMemory, NewSlashCommand, SlashCommand, SlashCommandParam,
 };
 use std::collections::{HashMap, HashSet};
 use std::sync::Arc;
@@ -13,7 +13,8 @@ use crate::acp::manager::AcpManager;
 use crate::acp::registry::{check_agents_installed, fetch_registry};
 use crate::acp::types::{AgentConfig, AgentStatus, RegistryAgent, SessionConfigOptionInfo};
 use crate::context::LaunchContext;
-use crate::LaunchContextState;
+use crate::hotkey;
+use crate::{HotkeyState, LaunchContextState};
 
 pub struct AcpState(pub Arc<Mutex<AcpManager>>);
 
@@ -39,7 +40,7 @@ pub fn get_all_items() -> Result<Vec<Item>, String> {
 pub fn execute_item(
     id: String,
     context_state: tauri::State<'_, LaunchContextState>,
-) -> Result<(), String> {
+) -> Result<Option<String>, String> {
     let db = Database::new()?;
     let mut item = db.get_item(&id)?;
     db.increment_frequency(&id)?;
@@ -92,45 +93,46 @@ pub fn execute_item(
     match item.action_type.as_str() {
         "url" => {
             open::that(&item.action_value).map_err(|e| format!("Failed to open URL: {e}"))?;
+            Ok(None)
         }
-        "command" => {
+        "command" | "script" => {
             #[cfg(target_os = "windows")]
-            {
-                std::process::Command::new("cmd")
-                    .args(["/C", &item.action_value])
-                    .spawn()
-                    .map_err(|e| format!("Failed to execute command: {e}"))?;
-            }
+            let output = {
+                std::process::Command::new("powershell")
+                    .args(["-NoProfile", "-Command", &item.action_value])
+                    .output()
+                    .map_err(|e| format!("Failed to execute command: {e}"))?
+            };
             #[cfg(not(target_os = "windows"))]
-            {
+            let output = {
                 std::process::Command::new("sh")
                     .args(["-c", &item.action_value])
-                    .spawn()
-                    .map_err(|e| format!("Failed to execute command: {e}"))?;
-            }
-        }
-        "script" => {
-            #[cfg(target_os = "windows")]
-            {
-                std::process::Command::new("cmd")
-                    .args(["/C", &item.action_value])
-                    .spawn()
-                    .map_err(|e| format!("Failed to execute script: {e}"))?;
-            }
-            #[cfg(not(target_os = "windows"))]
-            {
-                std::process::Command::new("sh")
-                    .args(["-c", &item.action_value])
-                    .spawn()
-                    .map_err(|e| format!("Failed to execute script: {e}"))?;
-            }
-        }
-        other => {
-            return Err(format!("Unknown action type: {other}"));
-        }
-    }
+                    .output()
+                    .map_err(|e| format!("Failed to execute command: {e}"))?
+            };
 
-    Ok(())
+            let stdout = String::from_utf8_lossy(&output.stdout).to_string();
+            let stderr = String::from_utf8_lossy(&output.stderr).to_string();
+
+            if !output.status.success() && !stderr.is_empty() {
+                return Err(stderr);
+            }
+
+            let combined = if stderr.is_empty() {
+                stdout
+            } else {
+                format!("{stdout}\n{stderr}")
+            };
+            let trimmed = combined.trim().to_string();
+
+            if trimmed.is_empty() {
+                Ok(None)
+            } else {
+                Ok(Some(trimmed))
+            }
+        }
+        other => Err(format!("Unknown action type: {other}")),
+    }
 }
 
 #[tauri::command]
@@ -793,6 +795,33 @@ pub fn execute_slash_command(name: String, args: String) -> Result<String, Strin
     } else {
         Err(format!("Script failed:\n{stderr}\n{stdout}"))
     }
+}
+
+#[tauri::command]
+pub fn get_slash_command_params(name: String) -> Result<Vec<SlashCommandParam>, String> {
+    let db = Database::new()?;
+    db.get_params_by_command_name(&name)
+}
+
+// --- Shortcut mode commands ---
+
+#[tauri::command]
+pub fn get_shortcut_mode(state: tauri::State<'_, HotkeyState>) -> Result<String, String> {
+    let mgr = state.0.lock().map_err(|e| format!("{e}"))?;
+    Ok(mgr.mode().as_str().to_string())
+}
+
+#[tauri::command]
+pub fn set_shortcut_mode(
+    app: AppHandle,
+    state: tauri::State<'_, HotkeyState>,
+    mode: String,
+) -> Result<(), String> {
+    let mut mgr = state.0.lock().map_err(|e| format!("{e}"))?;
+    mgr.switch_mode(&app, &mode)?;
+    let db = Database::new()?;
+    db.set_setting(hotkey::SETTING_KEY, &mode)?;
+    Ok(())
 }
 
 // --- Per-agent env var commands ---

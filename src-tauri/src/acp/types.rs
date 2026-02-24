@@ -46,6 +46,7 @@ pub enum AgentUpdate {
         id: String,
         title: String,
         kind: String,
+        content: Option<String>,
     },
     ToolCallUpdate {
         id: String,

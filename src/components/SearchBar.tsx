@@ -1,4 +1,5 @@
 import { useRef, useEffect, useState } from "react";
+import { listen } from "@tauri-apps/api/event";
 import { AgentStatusIndicator } from "./AgentStatusIndicator";
 import type { AgentStatus } from "../types";
 
@@ -141,6 +142,16 @@ function SearchBar({
       inputRef.current?.focus();
     }
   }, [focusSignal]);
+
+  // Re-focus input whenever the window gains focus
+  useEffect(() => {
+    const unlisten = listen("tauri://focus", () => {
+      inputRef.current?.focus();
+    });
+    return () => {
+      unlisten.then((fn) => fn());
+    };
+  }, []);
 
   return (
     <div

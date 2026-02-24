@@ -153,3 +153,21 @@ pub struct NewSlashCommand {
     pub description: String,
     pub script_path: String,
 }
+
+#[derive(Debug, Clone, Serialize, Deserialize)]
+pub struct SlashCommandParam {
+    pub id: String,
+    pub command_id: String,
+    pub name: String,
+    pub description: String,
+    pub position: i64,
+    pub required: bool,
+}
+
+#[derive(Debug, Clone, Serialize, Deserialize)]
+pub struct NewSlashCommandParam {
+    pub name: String,
+    pub description: String,
+    pub position: i64,
+    pub required: bool,
+}

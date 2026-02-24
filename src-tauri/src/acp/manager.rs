@@ -641,15 +641,29 @@ fn build_slash_command_prompt(
          Your ONLY job:\n\
          1. Figure out what the script should do based on the command name and arguments.\n\
             For example: `/kill 4924` → a script that kills the process running on port 4924.\n\
-         2. In ONE short sentence, say what you'll create. Then IMMEDIATELY call `slash_commands_add`.\n\
-         3. Call `slash_commands_run` to execute it.\n\
-         4. Briefly confirm what happened. STOP — do not do anything else.\n\n\
+         2. Show a PREVIEW of what you'll create using this exact format:\n\n\
+            **Command:** `/commandname`\n\
+            **Description:** What it does\n\
+            **Parameters:**\n\
+            - `param1` (required) — description of param1\n\
+            - `param2` (optional) — description of param2\n\
+            **Script preview:**\n\
+            ```\n\
+            (the full script content)\n\
+            ```\n\n\
+            Then ask: \"Shall I create this command?\"\n\
+         3. WAIT for the user to confirm (e.g., \"yes\", \"ok\", \"go ahead\").\n\
+            - If the user says no or asks for changes, revise and show the preview again.\n\
+            - CRITICAL: Do NOT call `slash_commands_add` until the user explicitly confirms.\n\
+         4. After confirmation, call `slash_commands_add` with the script and parameter definitions.\n\
+         5. Briefly confirm the command was created. STOP — do NOT execute the command yourself.\n\
+            The GoLaunch UI will provide an execute button to the user.\n\n\
          Guidelines:\n\
          - Be smart about inferring the purpose from the command name — the user expects you to understand.\n\
          - Be concise — the user is in a launcher and wants quick results.\n\
          - Make scripts robust: validate arguments, handle errors, produce clear output.\n\
          - If the purpose is ambiguous, ask ONE clarifying question, then proceed.\n\
-         - After creating and executing, briefly confirm what happened.\n\
+         - Always define parameters with clear names and descriptions for every argument the script accepts.\n\
          - ONLY use the GoLaunch MCP tools listed below. Do NOT use Bash, Read, Glob, Grep, \
            Write, Edit, or any other filesystem tools. Do NOT explore the codebase or look for \
            configuration files. You already have everything you need.\n\n",
@@ -681,13 +695,15 @@ fn build_slash_command_prompt(
         "## GoLaunch MCP Tools\n\
          Script storage directory: `{slash_dir}`\n\n\
          Available slash command tools:\n\
-         - `slash_commands_add` — Create a new slash command (name, description, script_content). Writes the script file automatically.\n\
+         - `slash_commands_add` — Create a new slash command (name, description, script_content, params). \
+           The `params` field is an array of parameter definitions: [{{name, description, position, required}}]. \
+           Writes the script file automatically.\n\
          - `slash_commands_get` — Get a slash command by name\n\
          - `slash_commands_list` — List all registered slash commands\n\
          - `slash_commands_search` — Search slash commands by name or description\n\
          - `slash_commands_remove` — Remove a slash command by name\n\
-         - `slash_commands_run` — Execute a slash command by name with optional args\n\n\
-         Workflow: call `slash_commands_add` with the script contents, then execute with `slash_commands_run`.\n\n"
+         - `slash_commands_get_params` — Get parameter definitions for a slash command by name\n\n\
+         Workflow: show a preview and wait for user approval, then call `slash_commands_add` with the script contents and params. Do NOT execute the command — the UI handles that.\n\n"
     ));
 
     // ── User memory / preferences ──
@@ -756,7 +772,11 @@ fn build_agent_prompt(
          4. Help the user figure out what command they need\n\
          5. Answer questions about tools, CLIs, and workflows\n\n\
          IMPORTANT — Action-oriented behavior:\n\
-         - When the user wants to add a command, DO IT immediately with the appropriate MCP tool. Don't just suggest it.\n\
+         - When the user wants to add a command or item, ALWAYS show a preview first and ask for approval \
+           before calling `items_add`. Show the item details (title, action, type, category) and ask: \
+           \"Shall I add this?\" Wait for the user to confirm before creating it.\n\
+         - After successfully adding an item, ask the user: \"Want me to run it now?\" \
+           If the user confirms, call `items_run` to execute it.\n\
          - When the user asks about their setup, QUERY the database first, then answer.\n\
          - If the query is ambiguous, CHECK memory and existing commands first before asking clarifying questions.\n\
          - Treat memory facts as authoritative context (e.g., if a name maps to a project, use that meaning).\n\
@@ -765,7 +785,7 @@ fn build_agent_prompt(
          - After making changes, briefly confirm what you did.\n\
          - Be concise — the user is in a launcher and wants quick results.\n\
          - If the query looks like a command (e.g. \"npm install\", \"docker compose up\"), \
-           add it as a launcher item proactively.\n\
+           suggest adding it as a launcher item — but always show a preview and wait for approval first.\n\
          - You have access to the user's current context: selected text, clipboard, and source application.\n\
          - IMPORTANT: Distinguish between two types of requests:\n\
            A) REWRITE requests — when the user explicitly asks to rewrite, rephrase, translate, \

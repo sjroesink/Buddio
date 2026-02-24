@@ -5,5 +5,5 @@ pub use db::Database;
 pub use models::{
     CommandHistory, CommandSuggestion, Conversation, ConversationMessage, ConversationWithPreview,
     Item, Memory, NewCommandHistory, NewConversation, NewConversationMessage, NewItem, NewMemory,
-    NewSlashCommand, Setting, SlashCommand, UpdateItem,
+    NewSlashCommand, NewSlashCommandParam, Setting, SlashCommand, SlashCommandParam, UpdateItem,
 };

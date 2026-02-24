@@ -1,6 +1,6 @@
 use golaunch_core::{
     Database, NewCommandHistory, NewConversation, NewConversationMessage, NewItem, NewMemory,
-    NewSlashCommand, UpdateItem,
+    NewSlashCommand, NewSlashCommandParam, UpdateItem,
 };
 use rmcp::{
     handler::server::{router::tool::ToolRouter, wrapper::Parameters},
@@ -186,6 +186,27 @@ pub struct SlashCommandAddParams {
     /// The script contents (PowerShell on Windows, shell on other platforms).
     /// The file will be written automatically to the slash-commands directory.
     pub script_content: String,
+    /// Parameter definitions for this command
+    #[serde(default)]
+    pub params: Vec<SlashCommandParamInput>,
+}
+
+#[derive(Debug, Deserialize, schemars::JsonSchema)]
+pub struct SlashCommandParamInput {
+    /// Parameter name (e.g., "port")
+    pub name: String,
+    /// Description of the parameter
+    #[serde(default)]
+    pub description: String,
+    /// Zero-indexed position of the parameter
+    pub position: i64,
+    /// Whether the parameter is required (default: true)
+    #[serde(default = "default_true")]
+    pub required: bool,
+}
+
+fn default_true() -> bool {
+    true
 }
 
 #[derive(Debug, Deserialize, schemars::JsonSchema)]
@@ -735,7 +756,7 @@ impl GoLaunchMcp {
     // ── Slash Commands (7) ──────────────────────────────────────────────
 
     #[tool(
-        description = "Create a new slash command by providing the script contents directly. The script file is written to disk automatically."
+        description = "Create a new slash command by providing the script contents directly. The script file is written to disk automatically. Optionally include parameter definitions via the `params` array."
     )]
     fn slash_commands_add(
         &self,
@@ -767,6 +788,23 @@ impl GoLaunchMcp {
                 script_path: script_path.to_string_lossy().to_string(),
             })
             .map_err(db_err)?;
+
+        // Store parameter definitions if provided
+        if !p.params.is_empty() {
+            let new_params: Vec<NewSlashCommandParam> = p
+                .params
+                .into_iter()
+                .map(|pi| NewSlashCommandParam {
+                    name: pi.name,
+                    description: pi.description,
+                    position: pi.position,
+                    required: pi.required,
+                })
+                .collect();
+            db.add_slash_command_params(&cmd.id, new_params)
+                .map_err(db_err)?;
+        }
+
         Ok(json_text(&cmd))
     }
 
@@ -860,6 +898,16 @@ impl GoLaunchMcp {
         let db = self.get_db()?;
         db.increment_slash_command_usage(&p.id).map_err(db_err)?;
         Ok(json_text(&serde_json::json!({ "success": true })))
+    }
+
+    #[tool(description = "Get parameter definitions for a slash command by name")]
+    fn slash_commands_get_params(
+        &self,
+        Parameters(p): Parameters<SlashCommandNameParams>,
+    ) -> Result<CallToolResult, McpError> {
+        let db = self.get_db()?;
+        let params = db.get_params_by_command_name(&p.name).map_err(db_err)?;
+        Ok(json_text(&params))
     }
 
     // ── Settings (4) ────────────────────────────────────────────────────
