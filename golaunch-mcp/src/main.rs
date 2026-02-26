@@ -12,7 +12,7 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
             .map(|w| std::path::PathBuf::from(&w[1]))
     };
 
-    let server = server::GoLaunchMcp::new(db_path);
+    let server = server::BuddioMcp::new(db_path);
     let service = server.serve(stdio()).await?;
     service.waiting().await?;
     Ok(())

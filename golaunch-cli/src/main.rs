@@ -3,11 +3,11 @@ use golaunch_core::{Database, NewCommandHistory, NewItem, NewMemory, NewSlashCom
 use std::path::PathBuf;
 
 #[derive(Parser)]
-#[command(name = "golaunch-cli")]
-#[command(about = "CLI tool for managing GoLaunch launcher items")]
+#[command(name = "buddio-cli")]
+#[command(about = "CLI tool for managing Buddio launcher items")]
 #[command(version)]
 struct Cli {
-    /// Path to the database file (defaults to ~/.local/share/golaunch/golaunch.db)
+    /// Path to the database file (defaults to ~/.local/share/buddio/buddio.db)
     #[arg(long, global = true)]
     db: Option<PathBuf>,
 

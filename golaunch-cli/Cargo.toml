@@ -1,11 +1,11 @@
 [package]
-name = "golaunch-cli"
+name = "buddio-cli"
 version = "0.1.0"
 edition = "2021"
-description = "CLI tool for managing GoLaunch items"
+description = "CLI tool for managing Buddio items"
 
 [[bin]]
-name = "golaunch-cli"
+name = "buddio-cli"
 path = "src/main.rs"
 
 [dependencies]

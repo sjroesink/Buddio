@@ -244,12 +244,12 @@ pub struct SettingsSetParams {
 // ---------------------------------------------------------------------------
 
 #[derive(Clone)]
-pub struct GoLaunchMcp {
+pub struct BuddioMcp {
     db_path: Option<PathBuf>,
     tool_router: ToolRouter<Self>,
 }
 
-impl GoLaunchMcp {
+impl BuddioMcp {
     pub fn new(db_path: Option<PathBuf>) -> Self {
         Self {
             db_path,
@@ -280,7 +280,7 @@ fn json_text<T: serde::Serialize>(val: &T) -> CallToolResult {
 // ---------------------------------------------------------------------------
 
 #[tool_router]
-impl GoLaunchMcp {
+impl BuddioMcp {
     // ── Items (10) ──────────────────────────────────────────────────────
 
     #[tool(
@@ -953,7 +953,7 @@ impl GoLaunchMcp {
 
     // ── Utility (1) ─────────────────────────────────────────────────────
 
-    #[tool(description = "Get the path to the GoLaunch database file")]
+    #[tool(description = "Get the path to the Buddio database file")]
     fn db_path(&self) -> Result<CallToolResult, McpError> {
         let path = match &self.db_path {
             Some(p) => p.display().to_string(),
@@ -968,12 +968,12 @@ impl GoLaunchMcp {
 // ---------------------------------------------------------------------------
 
 #[tool_handler]
-impl ServerHandler for GoLaunchMcp {
+impl ServerHandler for BuddioMcp {
     fn get_info(&self) -> ServerInfo {
         ServerInfo {
             instructions: Some(
-                "GoLaunch MCP server. Manages launcher items, memories, command history, \
-                 conversations, slash commands, and settings for the GoLaunch keyboard launcher."
+                "Buddio MCP server. Manages launcher items, memories, command history, \
+                 conversations, slash commands, and settings for the Buddio keyboard launcher."
                     .into(),
             ),
             capabilities: ServerCapabilities::builder().enable_tools().build(),

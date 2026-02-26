@@ -21,7 +21,7 @@ function friendlyToolTitle(raw: string): string {
   if (l.includes("settings_")) return "Access settings";
   if (l.includes("conversations_")) return "Manage conversations";
   // Fallback: strip prefix and humanize
-  return raw.replace(/^mcp_golaunch_/i, "").replace(/_/g, " ");
+  return raw.replace(/^mcp_(buddio|golaunch)_/i, "").replace(/_/g, " ");
 }
 
 /** Extract the command name from a slash_commands_add tool call's content (JSON). */

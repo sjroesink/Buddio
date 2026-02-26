@@ -19,8 +19,8 @@ fn normalize_command_preview(text: &str) -> String {
         .join(" ")
 }
 
-/// GoLaunch MCP tools that are read-only and safe to auto-allow.
-const GOLAUNCH_READ_TOOLS: &[&str] = &[
+/// Buddio MCP tools that are read-only and safe to auto-allow.
+const BUDDIO_READ_TOOLS: &[&str] = &[
     "items_get",
     "items_search",
     "items_list",
@@ -51,13 +51,13 @@ const GOLAUNCH_READ_TOOLS: &[&str] = &[
 ];
 
 fn should_auto_allow(tool_name: &str, command_preview: Option<&str>) -> bool {
-    // Auto-allow GoLaunch MCP read-only tools
+    // Auto-allow Buddio MCP read-only tools
     let tool_lower = tool_name.to_lowercase();
-    if GOLAUNCH_READ_TOOLS.iter().any(|t| tool_lower.contains(t)) {
+    if BUDDIO_READ_TOOLS.iter().any(|t| tool_lower.contains(t)) {
         return true;
     }
 
-    // Legacy: auto-allow read-only golaunch-cli bash commands
+    // Auto-allow read-only CLI commands (Buddio + legacy GoLaunch)
     let Some(preview) = command_preview else {
         return false;
     };
@@ -65,7 +65,7 @@ fn should_auto_allow(tool_name: &str, command_preview: Option<&str>) -> bool {
     let normalized = normalize_command_preview(preview);
     let padded = format!(" {normalized} ");
 
-    if !padded.contains("golaunch-cli") {
+    if !padded.contains("buddio-cli") && !padded.contains("golaunch-cli") {
         return false;
     }
 
@@ -97,17 +97,17 @@ fn pick_auto_allow_option_id(options: &[PermissionOptionInfo]) -> Option<String>
         .map(|o| o.option_id.clone())
 }
 
-/// GoLaunch's ACP client handler.
+/// Buddio's ACP client handler.
 ///
 /// Receives session notifications and permission requests from the agent subprocess
 /// and forwards them as serializable types over channels to the Tauri event system.
-pub struct GoLaunchClient {
+pub struct BuddioClient {
     update_tx: mpsc::UnboundedSender<AgentUpdate>,
     permission_tx: mpsc::UnboundedSender<PermissionRequest>,
     pending_permissions: Rc<RefCell<HashMap<String, PermissionResponder>>>,
 }
 
-impl GoLaunchClient {
+impl BuddioClient {
     pub fn new(
         update_tx: mpsc::UnboundedSender<AgentUpdate>,
         permission_tx: mpsc::UnboundedSender<PermissionRequest>,
@@ -125,7 +125,7 @@ impl GoLaunchClient {
 }
 
 #[async_trait::async_trait(?Send)]
-impl Client for GoLaunchClient {
+impl Client for BuddioClient {
     async fn request_permission(
         &self,
         args: RequestPermissionRequest,

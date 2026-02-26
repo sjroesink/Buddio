@@ -84,4 +84,4 @@ jobs:
       - name: Run E2E tests
         run: xvfb-run npm run test:e2e
         env:
-          GOLAUNCH_TEST: "1"
+          BUDDIO_TEST: "1"

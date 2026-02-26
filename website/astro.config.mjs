@@ -3,6 +3,6 @@ import tailwind from "@astrojs/tailwind";
 
 export default defineConfig({
   site: "https://sjroesink.github.io",
-  base: "/GoLaunch",
+  base: "/Buddio",
   integrations: [tailwind({ applyBaseStyles: false })],
 });

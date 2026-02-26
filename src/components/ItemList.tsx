@@ -36,7 +36,7 @@ function ItemList({ items, selectedIndex, onSelect, onExecute }: ItemListProps) 
           </svg>
           <p className="text-sm">No items found</p>
           <p className="text-xs mt-1 opacity-60">
-            Use golaunch-cli to add items
+            Use buddio-cli to add items
           </p>
         </div>
       </div>

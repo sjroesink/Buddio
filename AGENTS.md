@@ -1,11 +1,11 @@
 # Repository Guidelines
 
 ## Project Structure & Module Organization
-GoLaunch is a Rust + Tauri + React monorepo.
+Buddio is a Rust + Tauri + React monorepo.
 - `src/`: React UI (`components/`, `hooks/`, `types.ts`, `App.tsx`).
 - `src-tauri/`: Desktop app shell (`src/commands.rs`, `tauri.conf.json`, icons, capabilities).
 - `golaunch-core/`: Shared Rust library for SQLite access and data models.
-- `golaunch-cli/`: Rust CLI for item CRUD/import/export.
+- `golaunch-cli/`: Rust CLI crate for item CRUD/import/export (builds `buddio-cli`).
 - `.github/workflows/`: CI/release pipelines. Build outputs go to `target/` and frontend artifacts to `dist/`.
 
 ## Build, Test, and Development Commands
@@ -16,7 +16,7 @@ Run from repository root unless noted.
 - `npx tauri dev`: run full desktop app in development mode.
 - `npx tauri build`: produce desktop release artifacts.
 - `cargo build --workspace`: compile all Rust crates.
-- `cargo build --release --package golaunch-cli`: build release CLI binary.
+- `cargo build --release --package buddio-cli`: build release CLI binary.
 - `cargo fmt --all -- --check`: Rust formatting check.
 - `cargo clippy --workspace -- -D warnings`: lint Rust (warnings fail CI).
 - `npx tsc --noEmit`: strict TS type check.
@@ -36,7 +36,7 @@ There is no dedicated automated test suite yet. Minimum validation before PR:
 Add new tests close to changed code (`#[cfg(test)]` in Rust modules, component/hook tests if frontend test tooling is introduced).
 
 ## Commit & Pull Request Guidelines
-Use Conventional Commits (example in history: `feat: initial GoLaunch ...`). Prefer:
+Use Conventional Commits (example in history: `feat: initial Buddio ...`). Prefer:
 - `feat: ...`, `fix: ...`, `chore: ...`, `docs: ...`, `refactor: ...`.
 
 PRs should include:

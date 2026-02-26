@@ -109,6 +109,16 @@ function App() {
     };
   }, [launcher, agent]);
 
+  // Open settings on backend event (e.g. tray menu action)
+  useEffect(() => {
+    const unlisten = listen("open-settings", () => {
+      setSettingsOpen(true);
+    });
+    return () => {
+      unlisten.then((fn) => fn());
+    };
+  }, []);
+
   // Detect clipboard images when the window gains focus
   useEffect(() => {
     const clipboardImageChecked = { current: false };
@@ -497,6 +507,7 @@ function App() {
               hasSelection: launchCtx.hasSelection,
               hasClipboard: launchCtx.hasClipboard,
               sourceApp: launchCtx.context.source_window_title,
+              sourceProcessName: launchCtx.context.source_process_name,
               selectedText: launchCtx.context.selected_text,
               clipboardText: launchCtx.context.clipboard_text,
             }}

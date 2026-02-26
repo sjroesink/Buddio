@@ -1,11 +1,11 @@
 [package]
-name = "golaunch-mcp"
+name = "buddio-mcp"
 version = "0.1.0"
 edition = "2021"
-description = "MCP server for GoLaunch - exposes launcher data to AI assistants"
+description = "MCP server for Buddio - exposes launcher data to AI assistants"
 
 [[bin]]
-name = "golaunch-mcp"
+name = "buddio-mcp"
 path = "src/main.rs"
 
 [dependencies]

@@ -1,13 +1,13 @@
-# GoLaunch
+# Buddio
 
 A fast, keyboard-driven launcher inspired by Raycast, built with [Tauri](https://tauri.app/) and React. Items are managed via a CLI, making it ideal for automation by AI agents.
 
 ## Architecture
 
 ```
-GoLaunch/
+Buddio/
 ├── golaunch-core/      # Shared library (SQLite database + models)
-├── golaunch-cli/       # CLI for managing launcher items
+├── golaunch-cli/       # CLI crate (builds `buddio-cli`)
 ├── src-tauri/          # Tauri desktop application
 ├── src/                # React frontend (Raycast-like UI)
 └── .github/workflows/  # Release automation
@@ -18,7 +18,7 @@ GoLaunch/
 - **Raycast-like UI** — Dark, borderless, always-on-top launcher window
 - **Keyboard-first** — Navigate with arrow keys, Enter to execute, Esc to dismiss, Tab for categories
 - **Global shortcut** — `Ctrl+Space` to toggle the launcher
-- **CLI management** — Add, remove, update, search, import/export items via `golaunch-cli`
+- **CLI management** — Add, remove, update, search, import/export items via `buddio-cli`
 - **SQLite database** — Lightweight, file-based storage shared between app and CLI
 - **AI-agent friendly** — JSON output, scriptable CLI, import/export for batch operations
 - **Cross-platform** — Linux, macOS, and Windows via Tauri
@@ -27,35 +27,35 @@ GoLaunch/
 
 ```bash
 # Add items
-golaunch-cli add --title "Google" --action-type url --action-value "https://google.com" --icon "🔍" --category "Web"
-golaunch-cli add --title "Terminal" --action-type command --action-value "gnome-terminal" --icon "⚡" --category "Apps"
-golaunch-cli add --title "Deploy" --action-type script --action-value "./deploy.sh" --category "DevOps"
+buddio-cli add --title "Google" --action-type url --action-value "https://google.com" --icon "🔍" --category "Web"
+buddio-cli add --title "Terminal" --action-type command --action-value "gnome-terminal" --icon "⚡" --category "Apps"
+buddio-cli add --title "Deploy" --action-type script --action-value "./deploy.sh" --category "DevOps"
 
 # List all items
-golaunch-cli list
-golaunch-cli list --json
-golaunch-cli list --category Web
+buddio-cli list
+buddio-cli list --json
+buddio-cli list --category Web
 
 # Search
-golaunch-cli search "google" --json
+buddio-cli search "google" --json
 
 # Update an item
-golaunch-cli update <id> --title "New Title" --icon "🚀"
+buddio-cli update <id> --title "New Title" --icon "🚀"
 
 # Remove an item
-golaunch-cli remove <id>
+buddio-cli remove <id>
 
 # Import from JSON
-golaunch-cli import items.json
+buddio-cli import items.json
 
 # Export all items
-golaunch-cli export --output backup.json
+buddio-cli export --output backup.json
 
 # Execute an item by ID
-golaunch-cli run <id>
+buddio-cli run <id>
 
 # Show database location
-golaunch-cli db-path
+buddio-cli db-path
 ```
 
 ### Import JSON format
@@ -114,7 +114,7 @@ npx tauri build
 ### Build CLI only
 
 ```bash
-cargo build --release --package golaunch-cli
+cargo build --release --package buddio-cli
 ```
 
 ## Releases
@@ -135,10 +135,12 @@ This triggers the release workflow which:
 
 ## Database
 
-GoLaunch uses SQLite, stored at:
-- **Linux**: `~/.local/share/golaunch/golaunch.db`
-- **macOS**: `~/Library/Application Support/golaunch/golaunch.db`
-- **Windows**: `C:\Users\<user>\AppData\Local\golaunch\golaunch.db`
+Buddio uses SQLite, stored at:
+- **Linux**: `~/.local/share/buddio/buddio.db`
+- **macOS**: `~/Library/Application Support/buddio/buddio.db`
+- **Windows**: `C:\Users\<user>\AppData\Local\buddio\buddio.db`
+
+Legacy GoLaunch databases are still detected automatically at the old path.
 
 Both the Tauri app and CLI share the same database file.
 

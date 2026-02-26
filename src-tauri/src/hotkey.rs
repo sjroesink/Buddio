@@ -21,17 +21,24 @@ pub fn toggle_launcher(handle: &tauri::AppHandle) {
             let _ = handle.emit("launcher-reset", ());
             let _ = window.hide();
         } else {
-            let ctx = context::capture_launch_context();
-            if let Some(state) = handle.try_state::<LaunchContextState>() {
-                if let Ok(mut lock) = state.0.lock() {
-                    *lock = ctx.clone();
-                }
-            }
-            let _ = handle.emit("launch-context", &ctx);
-            let _ = window.show();
-            let _ = window.set_focus();
-            let _ = window.center();
+            show_launcher(handle);
         }
+    }
+}
+
+/// Shows the launcher window and refreshes launch context.
+pub fn show_launcher(handle: &tauri::AppHandle) {
+    if let Some(window) = handle.get_webview_window("main") {
+        let ctx = context::capture_launch_context();
+        if let Some(state) = handle.try_state::<LaunchContextState>() {
+            if let Ok(mut lock) = state.0.lock() {
+                *lock = ctx.clone();
+            }
+        }
+        let _ = handle.emit("launch-context", &ctx);
+        let _ = window.show();
+        let _ = window.set_focus();
+        let _ = window.center();
     }
 }
 
@@ -166,6 +173,12 @@ pub struct HotkeyManager {
     shortcut_str: String,
 }
 
+impl Default for HotkeyManager {
+    fn default() -> Self {
+        Self::new()
+    }
+}
+
 impl HotkeyManager {
     pub fn new() -> Self {
         Self {
@@ -214,7 +227,11 @@ impl HotkeyManager {
     }
 
     /// Switch to a new shortcut at runtime.
-    pub fn switch_shortcut(&mut self, app: &tauri::AppHandle, shortcut_str: &str) -> Result<(), String> {
+    pub fn switch_shortcut(
+        &mut self,
+        app: &tauri::AppHandle,
+        shortcut_str: &str,
+    ) -> Result<(), String> {
         self.activate(app, shortcut_str.to_string())
     }
 

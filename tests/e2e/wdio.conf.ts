@@ -1,11 +1,22 @@
 import type { Options } from "@wdio/types";
 import { spawn, type ChildProcess } from "node:child_process";
+import { existsSync } from "node:fs";
 import { platform } from "node:os";
 import { resolve } from "node:path";
 
 // Resolve the tauri-driver binary. On Windows we use msedgedriver as the
 // WebDriver backend, on Linux WebKitWebDriver ships with webkit2gtk.
 let tauriDriver: ChildProcess;
+const extension = platform() === "win32" ? ".exe" : "";
+const buddioBinary = resolve(
+  __dirname,
+  `../../src-tauri/target/debug/buddio${extension}`,
+);
+const legacyBinary = resolve(
+  __dirname,
+  `../../src-tauri/target/debug/golaunch${extension}`,
+);
+const applicationBinary = existsSync(buddioBinary) ? buddioBinary : legacyBinary;
 
 export const config: Options.Testrunner = {
   runner: "local",
@@ -21,11 +32,7 @@ export const config: Options.Testrunner = {
       // tauri-driver exposes a WebDriver interface on port 4444 by default
       "browserName": "wry",
       "tauri:options": {
-        application: resolve(
-          __dirname,
-          "../../src-tauri/target/debug/golaunch" +
-            (platform() === "win32" ? ".exe" : ""),
-        ),
+        application: applicationBinary,
       },
     } as WebdriverIO.Capabilities,
   ],
@@ -49,7 +56,7 @@ export const config: Options.Testrunner = {
       stdio: ["ignore", "pipe", "pipe"],
       env: {
         ...process.env,
-        GOLAUNCH_TEST: "1",
+        BUDDIO_TEST: "1",
       },
     });
 

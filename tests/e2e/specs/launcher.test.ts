@@ -1,4 +1,4 @@
-describe("GoLaunch E2E", () => {
+describe("Buddio E2E", () => {
   it("should show the main window", async () => {
     // The app should render the root container
     const root = await $('[data-testid="app-root"]');

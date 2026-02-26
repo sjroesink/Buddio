@@ -96,7 +96,7 @@ pub fn execute_item(
             Ok(None)
         }
         "command" | "script" => {
-            // Fire-and-forget: spawn the process without waiting so GoLaunch
+            // Fire-and-forget: spawn the process without waiting so Buddio
             // never freezes on long-running or interactive commands.
             #[cfg(target_os = "windows")]
             {
@@ -587,7 +587,7 @@ pub async fn acp_install_agent(agent: RegistryAgent) -> Result<String, String> {
             // Download the archive and extract to a well-known directory
             let install_dir = dirs::data_local_dir()
                 .unwrap_or_else(|| std::path::PathBuf::from("."))
-                .join("GoLaunch")
+                .join("Buddio")
                 .join("agents")
                 .join(&agent_id);
 

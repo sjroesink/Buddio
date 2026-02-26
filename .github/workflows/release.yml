@@ -22,7 +22,7 @@ jobs:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
         with:
           tag_name: ${{ github.ref_name }}
-          release_name: GoLaunch ${{ github.ref_name }}
+          release_name: Buddio ${{ github.ref_name }}
           draft: true
           prerelease: false
 
@@ -68,7 +68,7 @@ jobs:
         run: npm ci
 
       - name: Build CLI
-        run: cargo build --release --package golaunch-cli
+        run: cargo build --release --package buddio-cli
 
       - name: Upload CLI artifact (Linux)
         if: matrix.platform == 'ubuntu-22.04'
@@ -77,8 +77,8 @@ jobs:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
         with:
           upload_url: ${{ needs.create-release.outputs.release_id && format('https://uploads.github.com/repos/{0}/releases/{1}/assets', github.repository, needs.create-release.outputs.release_id) || '' }}
-          asset_path: target/release/golaunch-cli
-          asset_name: golaunch-cli-linux-amd64
+          asset_path: target/release/buddio-cli
+          asset_name: buddio-cli-linux-amd64
           asset_content_type: application/octet-stream
 
       - name: Upload CLI artifact (macOS)
@@ -88,8 +88,8 @@ jobs:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
         with:
           upload_url: ${{ needs.create-release.outputs.release_id && format('https://uploads.github.com/repos/{0}/releases/{1}/assets', github.repository, needs.create-release.outputs.release_id) || '' }}
-          asset_path: target/release/golaunch-cli
-          asset_name: golaunch-cli-macos-aarch64
+          asset_path: target/release/buddio-cli
+          asset_name: buddio-cli-macos-aarch64
           asset_content_type: application/octet-stream
 
       - name: Upload CLI artifact (Windows)
@@ -99,8 +99,8 @@ jobs:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
         with:
           upload_url: ${{ needs.create-release.outputs.release_id && format('https://uploads.github.com/repos/{0}/releases/{1}/assets', github.repository, needs.create-release.outputs.release_id) || '' }}
-          asset_path: target/release/golaunch-cli.exe
-          asset_name: golaunch-cli-windows-amd64.exe
+          asset_path: target/release/buddio-cli.exe
+          asset_name: buddio-cli-windows-amd64.exe
           asset_content_type: application/octet-stream
 
       - name: Build Tauri app

@@ -7,12 +7,17 @@ use commands::*;
 use context::LaunchContext;
 use std::env;
 use std::sync::{Arc, Mutex as StdMutex};
+use tauri::menu::MenuBuilder;
+use tauri::tray::{MouseButton, MouseButtonState, TrayIconBuilder, TrayIconEvent};
 use tauri::{Emitter, Manager, WindowEvent};
 use tokio::sync::Mutex;
 
-/// Returns true when GOLAUNCH_TEST=1 is set (used by E2E test harness).
+/// Returns true when BUDDIO_TEST=1 is set (used by E2E test harness).
+/// Accepts legacy GOLAUNCH_TEST for backward compatibility.
 fn is_test_mode() -> bool {
-    env::var("GOLAUNCH_TEST").map_or(false, |v| v == "1")
+    env::var("BUDDIO_TEST")
+        .or_else(|_| env::var("GOLAUNCH_TEST"))
+        .is_ok_and(|v| v == "1")
 }
 
 use acp::manager::AcpManager;
@@ -22,6 +27,16 @@ pub struct LaunchContextState(pub StdMutex<LaunchContext>);
 
 /// Shared state for the hotkey manager.
 pub struct HotkeyState(pub StdMutex<hotkey::HotkeyManager>);
+
+const TRAY_OPEN_LAUNCHER_ID: &str = "tray_open_launcher";
+const TRAY_OPEN_SETTINGS_ID: &str = "tray_open_settings";
+
+fn show_launcher_from_tray(app: &tauri::AppHandle, open_settings: bool) {
+    hotkey::show_launcher(app);
+    if open_settings {
+        let _ = app.emit("open-settings", ());
+    }
+}
 
 #[cfg_attr(mobile, tauri::mobile_entry_point)]
 pub fn run() {
@@ -94,6 +109,39 @@ pub fn run() {
             // Initialize hotkey manager state
             let mut hotkey_mgr = hotkey::HotkeyManager::new();
 
+            let tray_menu = MenuBuilder::new(app)
+                .text(TRAY_OPEN_LAUNCHER_ID, "Launcher openen")
+                .text(TRAY_OPEN_SETTINGS_ID, "Settings openen")
+                .build()?;
+
+            let mut tray_builder = TrayIconBuilder::with_id("buddio-tray")
+                .menu(&tray_menu)
+                .tooltip("Buddio")
+                .show_menu_on_left_click(false)
+                .on_menu_event(|app, event| {
+                    if event.id() == TRAY_OPEN_LAUNCHER_ID {
+                        show_launcher_from_tray(app, false);
+                    } else if event.id() == TRAY_OPEN_SETTINGS_ID {
+                        show_launcher_from_tray(app, true);
+                    }
+                })
+                .on_tray_icon_event(|tray, event| {
+                    if let TrayIconEvent::Click {
+                        button: MouseButton::Left,
+                        button_state: MouseButtonState::Up,
+                        ..
+                    } = event
+                    {
+                        show_launcher_from_tray(tray.app_handle(), false);
+                    }
+                });
+
+            if let Some(icon) = app.default_window_icon().cloned() {
+                tray_builder = tray_builder.icon(icon);
+            }
+
+            tray_builder.build(app)?;
+
             // In test mode, skip global shortcut registration and keep window visible
             if is_test_mode() {
                 app.manage(HotkeyState(StdMutex::new(hotkey_mgr)));
@@ -106,23 +154,21 @@ pub fn run() {
 
             if let Some(window) = app.get_webview_window("main") {
                 let handle_on_close = handle.clone();
-                window.on_window_event(move |event| {
-                    match event {
-                        WindowEvent::CloseRequested { api, .. } => {
-                            api.prevent_close();
-                            let _ = handle_on_close.emit("launcher-reset", ());
-                            if let Some(main) = handle_on_close.get_webview_window("main") {
-                                let _ = main.hide();
-                            }
+                window.on_window_event(move |event| match event {
+                    WindowEvent::CloseRequested { api, .. } => {
+                        api.prevent_close();
+                        let _ = handle_on_close.emit("launcher-reset", ());
+                        if let Some(main) = handle_on_close.get_webview_window("main") {
+                            let _ = main.hide();
                         }
-                        WindowEvent::Focused(false) => {
-                            let _ = handle_on_close.emit("launcher-reset", ());
-                            if let Some(main) = handle_on_close.get_webview_window("main") {
-                                let _ = main.hide();
-                            }
-                        }
-                        _ => {}
                     }
+                    WindowEvent::Focused(false) => {
+                        let _ = handle_on_close.emit("launcher-reset", ());
+                        if let Some(main) = handle_on_close.get_webview_window("main") {
+                            let _ = main.hide();
+                        }
+                    }
+                    _ => {}
                 });
             }
 
@@ -137,5 +183,5 @@ pub fn run() {
             Ok(())
         })
         .run(tauri::generate_context!())
-        .expect("error while running GoLaunch");
+        .expect("error while running Buddio");
 }

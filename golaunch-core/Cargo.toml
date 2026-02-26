@@ -2,7 +2,7 @@
 name = "golaunch-core"
 version = "0.1.0"
 edition = "2021"
-description = "Core library for GoLaunch - shared database and models"
+description = "Core library for Buddio - shared database and models"
 
 [dependencies]
 rusqlite = { version = "0.32", features = ["bundled"] }

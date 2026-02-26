@@ -1,5 +1,6 @@
 ---
 const year = new Date().getFullYear();
+const logoSrc = `${import.meta.env.BASE_URL}buddio-wordmark.svg`;
 ---
 
 <footer class="border-t py-8" style="border-color: var(--glass-border);">
@@ -7,22 +8,15 @@ const year = new Date().getFullYear();
     class="mx-auto flex max-w-6xl flex-col items-center justify-between gap-4 px-6 sm:flex-row"
   >
     <!-- Left -->
-    <div class="flex items-center gap-2 text-sm text-launcher-muted">
-      <div
-        class="flex h-6 w-6 items-center justify-center rounded-md bg-launcher-accent/20 text-launcher-accent"
-      >
-        <svg
-          xmlns="http://www.w3.org/2000/svg"
-          viewBox="0 0 24 24"
-          fill="currentColor"
-          class="h-3 w-3"
-        >
-          <path
-            d="M3.478 2.404a.75.75 0 0 0-.926.941l2.432 7.905H13.5a.75.75 0 0 1 0 1.5H4.984l-2.432 7.905a.75.75 0 0 0 .926.94 60.519 60.519 0 0 0 18.445-8.986.75.75 0 0 0 0-1.218A60.517 60.517 0 0 0 3.478 2.404Z"
-          ></path>
-        </svg>
-      </div>
-      <span>GoLaunch &copy; {year}</span>
+    <div class="flex items-center gap-3 text-sm text-launcher-muted">
+      <img
+        src={logoSrc}
+        alt="Buddio"
+        class="h-7 w-auto opacity-95"
+        loading="lazy"
+        decoding="async"
+      />
+      <span>&copy; {year}</span>
       <span class="opacity-40">&middot;</span>
       <span>MIT License</span>
     </div>
@@ -30,7 +24,7 @@ const year = new Date().getFullYear();
     <!-- Right -->
     <div class="flex items-center gap-4">
       <a
-        href="https://github.com/sjroesink/GoLaunch"
+        href="https://github.com/sjroesink/Buddio"
         target="_blank"
         rel="noopener noreferrer"
         class="text-sm text-launcher-muted transition-colors hover:text-launcher-text"
@@ -38,7 +32,7 @@ const year = new Date().getFullYear();
         GitHub
       </a>
       <a
-        href="https://github.com/sjroesink/GoLaunch/releases"
+        href="https://github.com/sjroesink/Buddio/releases"
         target="_blank"
         rel="noopener noreferrer"
         class="text-sm text-launcher-muted transition-colors hover:text-launcher-text"
@@ -46,7 +40,7 @@ const year = new Date().getFullYear();
         Releases
       </a>
       <a
-        href="https://github.com/sjroesink/GoLaunch/issues"
+        href="https://github.com/sjroesink/Buddio/issues"
         target="_blank"
         rel="noopener noreferrer"
         class="text-sm text-launcher-muted transition-colors hover:text-launcher-text"

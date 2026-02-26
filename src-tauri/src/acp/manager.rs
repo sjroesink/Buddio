@@ -12,7 +12,7 @@ use golaunch_core::{
 use tauri::{AppHandle, Emitter};
 use tokio::sync::{mpsc, oneshot};
 
-use super::client::GoLaunchClient;
+use super::client::BuddioClient;
 use super::types::{
     AgentConfig, AgentStatus, AgentUpdate, PermissionRequest, SessionConfigOptionInfo,
     SessionConfigSelectGroupInfo, SessionConfigSelectOptionInfo, SessionConfigSelectOptionsInfo,
@@ -87,7 +87,7 @@ impl AcpManager {
         };
 
         // Resolve the binary path: check if it's on PATH, otherwise look in
-        // our install directory (AppData/Local/GoLaunch/agents/<agent_id>/)
+        // our install directory (AppData/Local/Buddio/agents/<agent_id>/)
         let resolved_binary = resolve_binary_path(&binary, &config.agent_id);
 
         // On Windows, commands like "npx" are actually .cmd batch scripts
@@ -151,7 +151,7 @@ impl AcpManager {
             let local = tokio::task::LocalSet::new();
 
             local.block_on(&rt, async move {
-                let acp_client = GoLaunchClient::new(update_tx.clone(), permission_tx);
+                let acp_client = BuddioClient::new(update_tx.clone(), permission_tx);
                 let pending_perms = acp_client.pending_permissions();
 
                 let stdin_async =
@@ -175,7 +175,7 @@ impl AcpManager {
                 let init_result = connection
                     .initialize(
                         InitializeRequest::new(ProtocolVersion::LATEST)
-                            .client_info(Implementation::new("GoLaunch", "0.1.0"))
+                            .client_info(Implementation::new("Buddio", "0.1.0"))
                             .client_capabilities(ClientCapabilities::new()),
                     )
                     .await;
@@ -185,15 +185,12 @@ impl AcpManager {
                     return;
                 }
 
-                // Create a new session with the GoLaunch MCP server
+                // Create a new session with the Buddio MCP server
                 let cwd = std::env::current_dir().unwrap_or_else(|_| "/".into());
                 let mcp_binary = resolve_mcp_binary_path();
-                let mcp_server =
-                    McpServer::Stdio(McpServerStdio::new("golaunch", &mcp_binary));
+                let mcp_server = McpServer::Stdio(McpServerStdio::new("buddio", &mcp_binary));
                 let session_result = connection
-                    .new_session(
-                        NewSessionRequest::new(cwd).mcp_servers(vec![mcp_server]),
-                    )
+                    .new_session(NewSessionRequest::new(cwd).mcp_servers(vec![mcp_server]))
                     .await;
 
                 let (session_id, initial_config_options) = match session_result {
@@ -560,7 +557,7 @@ fn convert_config_option(opt: &SessionConfigOption) -> SessionConfigOptionInfo {
 
 /// Resolve a binary path for agent spawning.
 /// If the binary is on PATH (or is "npx"), use it directly.
-/// Otherwise check the GoLaunch agents install directory.
+/// Otherwise check Buddio's agents install directory, with a legacy GoLaunch fallback.
 fn resolve_binary_path(binary: &str, agent_id: &str) -> String {
     // If it looks like an absolute path or "npx", use as-is
     if binary == "npx" || std::path::Path::new(binary).is_absolute() {
@@ -578,15 +575,25 @@ fn resolve_binary_path(binary: &str, agent_id: &str) -> String {
         return bin_no_ext.to_string();
     }
 
-    // Check our install directory: AppData/Local/GoLaunch/agents/<agent_id>/<binary>
+    // Check our install directory: AppData/Local/Buddio/agents/<agent_id>/<binary>
     if let Some(data_dir) = dirs::data_local_dir() {
-        let candidate = data_dir
+        let buddio_candidate = data_dir
+            .join("Buddio")
+            .join("agents")
+            .join(agent_id)
+            .join(binary);
+        if buddio_candidate.exists() {
+            return buddio_candidate.to_string_lossy().to_string();
+        }
+
+        // Legacy fallback: AppData/Local/GoLaunch/agents/<agent_id>/<binary>
+        let legacy_candidate = data_dir
             .join("GoLaunch")
             .join("agents")
             .join(agent_id)
             .join(binary);
-        if candidate.exists() {
-            return candidate.to_string_lossy().to_string();
+        if legacy_candidate.exists() {
+            return legacy_candidate.to_string_lossy().to_string();
         }
     }
 
@@ -594,12 +601,17 @@ fn resolve_binary_path(binary: &str, agent_id: &str) -> String {
     binary.to_string()
 }
 
-/// Resolve the path to the `golaunch-mcp` binary.
+/// Resolve the path to the `buddio-mcp` binary.
 ///
-/// During development both `golaunch-app` and `golaunch-mcp` are compiled to the
+/// During development both `buddio-app` and `buddio-mcp` are compiled to the
 /// same `target/{debug,release}` directory, so we look next to the current exe first.
 fn resolve_mcp_binary_path() -> std::path::PathBuf {
     let bin_name = if cfg!(target_os = "windows") {
+        "buddio-mcp.exe"
+    } else {
+        "buddio-mcp"
+    };
+    let legacy_bin_name = if cfg!(target_os = "windows") {
         "golaunch-mcp.exe"
     } else {
         "golaunch-mcp"
@@ -608,14 +620,23 @@ fn resolve_mcp_binary_path() -> std::path::PathBuf {
     // Check next to the current executable (works for both dev and bundled)
     if let Ok(exe) = std::env::current_exe() {
         if let Some(dir) = exe.parent() {
-            let candidate = dir.join(bin_name);
-            if candidate.exists() {
-                return candidate;
+            let buddio_candidate = dir.join(bin_name);
+            if buddio_candidate.exists() {
+                return buddio_candidate;
+            }
+
+            let legacy_candidate = dir.join(legacy_bin_name);
+            if legacy_candidate.exists() {
+                return legacy_candidate;
             }
         }
     }
 
-    // Fallback: assume it's on PATH
+    // Fallback: assume it's on PATH.
+    if super::registry::check_command_available(legacy_bin_name) {
+        return std::path::PathBuf::from(legacy_bin_name);
+    }
+
     std::path::PathBuf::from(bin_name)
 }
 
@@ -636,7 +657,7 @@ fn build_slash_command_prompt(
 
     // ── System instructions ──
     p.push_str(
-        "You are GoLaunch Slash Command Builder — a dedicated agent for creating and executing \
+        "You are Buddio Slash Command Builder — a dedicated agent for creating and executing \
          user-defined slash commands. The user typed a slash command that doesn't exist yet.\n\n\
          Your ONLY job:\n\
          1. Figure out what the script should do based on the command name and arguments.\n\
@@ -657,14 +678,14 @@ fn build_slash_command_prompt(
             - CRITICAL: Do NOT call `slash_commands_add` until the user explicitly confirms.\n\
          4. After confirmation, call `slash_commands_add` with the script and parameter definitions.\n\
          5. Briefly confirm the command was created. STOP — do NOT execute the command yourself.\n\
-            The GoLaunch UI will provide an execute button to the user.\n\n\
+            The Buddio UI will provide an execute button to the user.\n\n\
          Guidelines:\n\
          - Be smart about inferring the purpose from the command name — the user expects you to understand.\n\
          - Be concise — the user is in a launcher and wants quick results.\n\
          - Make scripts robust: validate arguments, handle errors, produce clear output.\n\
          - If the purpose is ambiguous, ask ONE clarifying question, then proceed.\n\
          - Always define parameters with clear names and descriptions for every argument the script accepts.\n\
-         - ONLY use the GoLaunch MCP tools listed below. Do NOT use Bash, Read, Glob, Grep, \
+         - ONLY use the Buddio MCP tools listed below. Do NOT use Bash, Read, Glob, Grep, \
            Write, Edit, or any other filesystem tools. Do NOT explore the codebase or look for \
            configuration files. You already have everything you need.\n\n",
     );
@@ -692,7 +713,7 @@ fn build_slash_command_prompt(
 
     // ── MCP tools reference (slash commands only) ──
     p.push_str(&format!(
-        "## GoLaunch MCP Tools\n\
+        "## Buddio MCP Tools\n\
          Script storage directory: `{slash_dir}`\n\n\
          Available slash command tools:\n\
          - `slash_commands_add` — Create a new slash command (name, description, script_content, params). \
@@ -762,11 +783,11 @@ fn build_agent_prompt(
 
     // ── System instructions ──
     p.push_str(
-        "You are GoLaunch Assistant, an AI helper embedded in GoLaunch — a keyboard-driven \
+        "You are Buddio Assistant, an AI helper embedded in Buddio — a keyboard-driven \
          launcher application. The user typed a search query that didn't match any of their \
          predefined commands, so they're asking you for help.\n\n\
          Your capabilities:\n\
-         1. Directly add, update, or remove launcher commands using the GoLaunch MCP tools\n\
+         1. Directly add, update, or remove launcher commands using the Buddio MCP tools\n\
          2. Query the launcher database to find commands, history, and memories\n\
          3. Manage the user's persistent memory (preferences, facts, patterns)\n\
          4. Help the user figure out what command they need\n\
@@ -804,8 +825,8 @@ fn build_agent_prompt(
 
     // ── MCP Tools Reference ──
     p.push_str(
-        "## GoLaunch MCP Tools\n\
-         You have GoLaunch MCP tools available for managing the launcher. Use these tools directly.\n\n\
+        "## Buddio MCP Tools\n\
+         You have Buddio MCP tools available for managing the launcher. Use these tools directly.\n\n\
          ### Items\n\
          - `items_add` — Add a new launcher item (title, action_value, action_type: command/url/script, category, subtitle, icon, tags)\n\
          - `items_get` — Get an item by ID\n\

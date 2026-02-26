@@ -123,12 +123,21 @@ fn check_npm_package_installed(package: &str) -> bool {
 /// Check whether a binary agent has been installed to our local agents directory.
 fn check_agent_installed_locally(agent_id: &str, binary_name: &str) -> bool {
     if let Some(data_dir) = dirs::data_local_dir() {
-        let candidate = data_dir
+        let buddio_candidate = data_dir
+            .join("Buddio")
+            .join("agents")
+            .join(agent_id)
+            .join(binary_name);
+        if buddio_candidate.exists() {
+            return true;
+        }
+
+        let legacy_candidate = data_dir
             .join("GoLaunch")
             .join("agents")
             .join(agent_id)
             .join(binary_name);
-        candidate.exists()
+        legacy_candidate.exists()
     } else {
         false
     }

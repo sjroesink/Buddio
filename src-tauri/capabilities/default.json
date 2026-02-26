@@ -1,7 +1,7 @@
 {
   "$schema": "../gen/schemas/desktop-schema.json",
   "identifier": "default",
-  "description": "Default capabilities for GoLaunch",
+  "description": "Default capabilities for Buddio",
   "windows": ["main"],
   "permissions": [
     "core:default",

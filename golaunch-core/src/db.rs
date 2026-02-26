@@ -45,14 +45,34 @@ impl Database {
         let data_dir = dirs::data_local_dir()
             .or_else(dirs::home_dir)
             .ok_or_else(|| "Cannot determine home directory".to_string())?;
-        Ok(data_dir.join("golaunch").join("golaunch.db"))
+        let buddio_db = data_dir.join("buddio").join("buddio.db");
+        if buddio_db.exists() {
+            return Ok(buddio_db);
+        }
+
+        let legacy_db = data_dir.join("golaunch").join("golaunch.db");
+        if legacy_db.exists() {
+            return Ok(legacy_db);
+        }
+
+        Ok(buddio_db)
     }
 
     pub fn slash_commands_dir() -> Result<PathBuf, String> {
         let data_dir = dirs::data_local_dir()
             .or_else(dirs::home_dir)
             .ok_or_else(|| "Cannot determine home directory".to_string())?;
-        Ok(data_dir.join("golaunch").join("slash-commands"))
+        let buddio_dir = data_dir.join("buddio").join("slash-commands");
+        if buddio_dir.exists() {
+            return Ok(buddio_dir);
+        }
+
+        let legacy_dir = data_dir.join("golaunch").join("slash-commands");
+        if legacy_dir.exists() {
+            return Ok(legacy_dir);
+        }
+
+        Ok(buddio_dir)
     }
 
     fn initialize(&self) -> Result<(), String> {
@@ -1256,10 +1276,7 @@ impl Database {
         Ok(results)
     }
 
-    pub fn get_params_by_command_name(
-        &self,
-        name: &str,
-    ) -> Result<Vec<SlashCommandParam>, String> {
+    pub fn get_params_by_command_name(&self, name: &str) -> Result<Vec<SlashCommandParam>, String> {
         let mut stmt = self
             .conn
             .prepare(
