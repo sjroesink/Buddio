@@ -4,7 +4,7 @@ import { listen } from "@tauri-apps/api/event";
 import { useLauncher } from "./hooks/useLauncher";
 import { useAcpAgent } from "./hooks/useAcpAgent";
 import { useLaunchContext } from "./hooks/useLaunchContext";
-import SearchBar from "./components/SearchBar";
+import SearchBar, { type PastedImage } from "./components/SearchBar";
 import CategoryBar from "./components/CategoryBar";
 import ItemList from "./components/ItemList";
 import StatusBar from "./components/StatusBar";
@@ -16,6 +16,7 @@ import ParameterHint from "./components/ParameterHint";
 import ConversationHistory from "./components/ConversationHistory";
 import { RewriteQuickActions } from "./components/RewriteQuickActions";
 import { CommandOutput } from "./components/CommandOutput";
+import { ContextPanel } from "./components/ContextPanel";
 import { Toast, type ToastData } from "./components/Toast";
 import type { AgentConfig } from "./types";
 
@@ -28,6 +29,8 @@ function App() {
   const [rewriteSelectedIndex, setRewriteSelectedIndex] = useState(0);
   const [toast, setToast] = useState<ToastData | null>(null);
   const [commandOutput, setCommandOutput] = useState<string | null>(null);
+  const [pastedImages, setPastedImages] = useState<PastedImage[]>([]);
+  const [contextPanelOpen, setContextPanelOpen] = useState(false);
   const containerRef = useRef<HTMLDivElement>(null);
 
   const agent = useAcpAgent();
@@ -92,6 +95,8 @@ function App() {
       setRewriteSelectedIndex(0);
       setToast(null);
       setCommandOutput(null);
+      setPastedImages([]);
+      setContextPanelOpen(false);
       if (agent.turnActive) {
         agent.cancel();
       }
@@ -103,6 +108,65 @@ function App() {
       unlisten.then((fn) => fn());
     };
   }, [launcher, agent]);
+
+  // Detect clipboard images when the window gains focus
+  useEffect(() => {
+    const clipboardImageChecked = { current: false };
+    const unlisten = listen("tauri://focus", async () => {
+      if (clipboardImageChecked.current) return;
+      clipboardImageChecked.current = true;
+      try {
+        const items = await navigator.clipboard.read();
+        for (const item of items) {
+          for (const type of item.types) {
+            if (type.startsWith("image/")) {
+              const blob = await item.getType(type);
+              const reader = new FileReader();
+              reader.onload = () => {
+                const dataUrl = reader.result as string;
+                setPastedImages((prev) => {
+                  if (prev.some((img) => img.dataUrl === dataUrl)) return prev;
+                  return [
+                    ...prev,
+                    {
+                      id: crypto.randomUUID(),
+                      dataUrl,
+                      name: "Clipboard image",
+                    },
+                  ];
+                });
+              };
+              reader.readAsDataURL(blob);
+            }
+          }
+        }
+      } catch {
+        // Clipboard API not available or permission denied
+      }
+    });
+    return () => {
+      unlisten.then((fn) => fn());
+    };
+  }, []);
+
+  const handleAddImage = useCallback((image: PastedImage) => {
+    setPastedImages((prev) => [...prev, image]);
+  }, []);
+
+  const handleRemoveImage = useCallback((id: string) => {
+    setPastedImages((prev) => prev.filter((img) => img.id !== id));
+  }, []);
+
+  const toggleContextPanel = useCallback(() => {
+    setContextPanelOpen((prev) => !prev);
+  }, []);
+
+  const hasSourceApp = !!launchCtx.context.source_window_title;
+  const contextCount =
+    (hasSourceApp ? 1 : 0) +
+    (launchCtx.hasSelection ? 1 : 0) +
+    (launchCtx.hasClipboard ? 1 : 0) +
+    pastedImages.length;
 
   const handleConnect = useCallback(
     async (config: AgentConfig) => {
@@ -154,6 +218,7 @@ function App() {
 
     setShowHistory(false);
     setForceAgentMode(false);
+    setContextPanelOpen(false);
 
     // Refresh search results — the agent may have added/removed items
     launcher.refresh();
@@ -201,6 +266,7 @@ function App() {
     isAgentInputMode &&
     (!showAgentThread || showHistory) &&
     !showRewriteActions &&
+    !contextPanelOpen &&
     (showHistory || agent.conversations.length > 0);
 
   const hasQuery = launcher.query.trim().length > 0;
@@ -211,7 +277,8 @@ function App() {
     !showAgentThread &&
     !showHistory &&
     !showRewriteActions &&
-    !commandOutput;
+    !commandOutput &&
+    !contextPanelOpen;
   const windowAnchor = isAgentInputMode ? "bottom" : "top";
 
   useEffect(() => {
@@ -285,7 +352,9 @@ function App() {
 
       if (isAgentInputMode && e.key === "Escape") {
         e.preventDefault();
-        if (showHistory) {
+        if (contextPanelOpen) {
+          setContextPanelOpen(false);
+        } else if (showHistory) {
           handleHideHistory();
         } else {
           exitAgentMode();
@@ -328,6 +397,7 @@ function App() {
       isAgentInputMode,
       showHistory,
       showRewriteActions,
+      contextPanelOpen,
       agent,
       launcher,
       launchCtx,
@@ -396,6 +466,21 @@ function App() {
               selectedIndex={rewriteSelectedIndex}
               onHover={setRewriteSelectedIndex}
             />
+          ) : contextPanelOpen && contextCount > 0 ? (
+            <ContextPanel
+              contextInfo={{
+                hasSelection: launchCtx.hasSelection,
+                hasClipboard: launchCtx.hasClipboard,
+                sourceApp: launchCtx.context.source_window_title,
+                sourceProcessName: launchCtx.context.source_process_name,
+                selectedText: launchCtx.context.selected_text,
+                clipboardText: launchCtx.context.clipboard_text,
+              }}
+              images={pastedImages}
+              onRemoveSelection={launchCtx.clearSelection}
+              onRemoveClipboard={launchCtx.clearClipboard}
+              onRemoveImage={handleRemoveImage}
+            />
           ) : (
             <div className="flex-1" />
           )}
@@ -415,6 +500,10 @@ function App() {
               selectedText: launchCtx.context.selected_text,
               clipboardText: launchCtx.context.clipboard_text,
             }}
+            contextCount={contextCount}
+            contextPanelOpen={contextPanelOpen}
+            onContextClick={toggleContextPanel}
+            onAddImage={handleAddImage}
           />
         </>
       ) : (

@@ -818,6 +818,17 @@ fn build_agent_prompt(
          - `items_import` — Import items from a JSON array\n\
          - `items_export` — Export all items as JSON\n\
          Action types: `command` (shell), `url` (browser), `script` (script file)\n\n\
+         ### Command Execution Details\n\
+         Commands (action_type `command` or `script`) are executed via `powershell -NoProfile -Command \"<action_value>\"` on Windows.\n\
+         This means `action_value` MUST be valid PowerShell syntax. Important rules:\n\
+         - Do NOT use `start powershell -NoExit ...` — `start` is an alias for `Start-Process` in PowerShell \
+           and `Start-Process` does NOT have a `-NoExit` parameter.\n\
+         - To run a command in a new visible PowerShell window that stays open, use:\n\
+           `Start-Process powershell -ArgumentList '-NoExit', '-Command', '\"your commands here\"'`\n\
+         - For fire-and-forget background commands (no window needed), just write the command directly:\n\
+           `Set-Location \"path\"; docker compose up -d`\n\
+         - Use single quotes for literal strings containing paths. Use Set-Location instead of cd when needed.\n\
+         - Commands are spawned asynchronously (fire-and-forget) — the launcher does not wait for them to finish.\n\n\
          ### Memory\n\
          - `memory_add` — Add or update a memory (key, value, memory_type: preference/pattern/fact, context, confidence)\n\
          - `memory_get` — Get memory by ID\n\

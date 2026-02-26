@@ -704,62 +704,88 @@ body,
   border-color: rgba(99, 102, 241, 0.5);
 }
 
-/* Shortcut settings */
-.shortcut-options {
-  display: flex;
-  flex-direction: column;
-  gap: 6px;
-}
-
-.shortcut-option {
+/* Hotkey recorder input */
+.hotkey-input {
   display: flex;
   align-items: center;
   gap: 10px;
-  padding: 9px 12px;
+  padding: 8px 12px;
   background: rgba(0, 0, 0, 0.2);
   border: 1px solid rgba(255, 255, 255, 0.08);
   border-radius: 8px;
   cursor: pointer;
   transition: all 0.15s ease;
+  min-height: 42px;
 }
 
-.shortcut-option:hover {
-  background: rgba(0, 0, 0, 0.3);
-  border-color: rgba(255, 255, 255, 0.12);
+.hotkey-input:hover {
+  border-color: rgba(255, 255, 255, 0.15);
 }
 
-.shortcut-option-active {
-  background: rgba(99, 102, 241, 0.1);
-  border-color: rgba(99, 102, 241, 0.4);
+.hotkey-recording {
+  border-color: rgba(99, 102, 241, 0.6);
+  background: rgba(99, 102, 241, 0.06);
+  box-shadow: 0 0 0 1px rgba(99, 102, 241, 0.2);
 }
 
-.shortcut-option-active:hover {
-  background: rgba(99, 102, 241, 0.15);
-  border-color: rgba(99, 102, 241, 0.5);
+.hotkey-recording:hover {
+  border-color: rgba(99, 102, 241, 0.6);
 }
 
-.shortcut-option input[type="radio"] {
-  display: none;
-}
-
-.shortcut-option-content {
+.hotkey-keys {
   display: flex;
-  align-items: baseline;
-  gap: 8px;
+  align-items: center;
+  gap: 5px;
+  flex: 1;
   min-width: 0;
+  flex-wrap: wrap;
 }
 
-.shortcut-option-label {
+.hotkey-placeholder {
   font-size: 12px;
-  font-weight: 500;
-  color: rgba(255, 255, 255, 0.85);
-  white-space: nowrap;
+  color: rgba(255, 255, 255, 0.3);
+  font-style: italic;
 }
 
-.shortcut-option-desc {
-  font-size: 10px;
-  color: rgba(255, 255, 255, 0.35);
+.hotkey-action-btn {
+  flex-shrink: 0;
+  padding: 3px 10px;
+  border-radius: 5px;
+  font-size: 11px;
+  font-weight: 500;
+  border: 1px solid rgba(255, 255, 255, 0.1);
+  background: rgba(255, 255, 255, 0.05);
+  color: rgba(255, 255, 255, 0.5);
+  cursor: pointer;
+  transition: all 0.12s;
+}
+
+.hotkey-action-btn:hover {
+  background: rgba(255, 255, 255, 0.1);
+  color: rgba(255, 255, 255, 0.7);
+}
+
+/* Keyboard key badges */
+.kbd {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  min-width: 24px;
+  height: 24px;
+  padding: 0 7px;
+  font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif;
+  font-size: 11px;
+  font-weight: 600;
+  line-height: 1;
+  color: rgba(255, 255, 255, 0.85);
+  background: linear-gradient(180deg, rgba(255, 255, 255, 0.1) 0%, rgba(255, 255, 255, 0.04) 100%);
+  border: 1px solid rgba(255, 255, 255, 0.15);
+  border-bottom-width: 2px;
+  border-bottom-color: rgba(255, 255, 255, 0.08);
+  border-radius: 5px;
+  box-shadow: 0 1px 2px rgba(0, 0, 0, 0.3);
   white-space: nowrap;
+  user-select: none;
 }
 
 /* Session config options */

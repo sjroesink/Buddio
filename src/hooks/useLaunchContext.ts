@@ -49,6 +49,15 @@ export function useLaunchContext() {
     setRewriteSuggestions([]);
   }, []);
 
+  // Clear individual context parts
+  const clearSelection = useCallback(() => {
+    setContext((prev) => ({ ...prev, selected_text: null }));
+  }, []);
+
+  const clearClipboard = useCallback(() => {
+    setContext((prev) => ({ ...prev, clipboard_text: null }));
+  }, []);
+
   // Type text into the source app (hides launcher, focuses source, types)
   const typeText = useCallback(async (text: string) => {
     await invoke("type_text_to_app", { text });
@@ -71,6 +80,8 @@ export function useLaunchContext() {
   return {
     context,
     clearContext,
+    clearSelection,
+    clearClipboard,
     typeText,
     replaceSelection,
     recordRewrite,

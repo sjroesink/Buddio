@@ -127,9 +127,9 @@ pub fn run() {
             }
 
             // Load saved shortcut preference and activate
-            let saved_mode = hotkey::HotkeyManager::load_saved_mode();
+            let saved_shortcut = hotkey::HotkeyManager::load_saved_shortcut();
             hotkey_mgr
-                .activate(&handle, saved_mode)
+                .activate(&handle, saved_shortcut)
                 .unwrap_or_else(|e| eprintln!("Failed to activate shortcut: {e}"));
 
             app.manage(HotkeyState(StdMutex::new(hotkey_mgr)));

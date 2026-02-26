@@ -33,9 +33,11 @@ export function useLauncher(options: UseLauncherOptions) {
   const [activeCommandName, setActiveCommandName] = useState("");
   const debounceRef = useRef<ReturnType<typeof setTimeout>>();
   const queryBeforeSuggestionSelectRef = useRef<string | null>(null);
+  const queryBeforeItemSelectRef = useRef<string | null>(null);
 
   const setQuery = useCallback((nextQuery: string) => {
     queryBeforeSuggestionSelectRef.current = null;
+    queryBeforeItemSelectRef.current = null;
     setSelectedSuggestionIndex(-1);
     setQueryState(nextQuery);
   }, []);
@@ -84,6 +86,9 @@ export function useLauncher(options: UseLauncherOptions) {
   }, [options.hasSelectedText, categories]);
 
   useEffect(() => {
+    // Don't re-fetch while previewing items with arrow keys
+    if (queryBeforeItemSelectRef.current !== null) return;
+
     if (debounceRef.current) clearTimeout(debounceRef.current);
     debounceRef.current = setTimeout(() => {
       fetchItems(query);
@@ -277,6 +282,10 @@ export function useLauncher(options: UseLauncherOptions) {
   }, []);
 
   const handleInputFocus = useCallback(() => {
+    if (queryBeforeItemSelectRef.current !== null) {
+      setQueryState(queryBeforeItemSelectRef.current);
+      queryBeforeItemSelectRef.current = null;
+    }
     if (selectedSuggestionIndex >= 0) {
       restoreQueryFromSuggestionPreview();
     }
@@ -447,22 +456,44 @@ export function useLauncher(options: UseLauncherOptions) {
       switch (e.key) {
         case "ArrowDown":
           e.preventDefault();
-          setSelectedIndex((prev) =>
-            prev < filteredItems.length - 1 ? prev + 1 : 0,
-          );
+          if (filteredItems.length > 0) {
+            const nextIdx =
+              selectedIndex < filteredItems.length - 1 ? selectedIndex + 1 : 0;
+            setSelectedIndex(nextIdx);
+            if (queryBeforeItemSelectRef.current === null) {
+              queryBeforeItemSelectRef.current = query;
+            }
+            setQueryState(filteredItems[nextIdx].title);
+          }
           break;
         case "ArrowUp":
           e.preventDefault();
-          setSelectedIndex((prev) =>
-            prev > 0 ? prev - 1 : filteredItems.length - 1,
-          );
+          if (filteredItems.length > 0) {
+            const nextIdx =
+              selectedIndex > 0 ? selectedIndex - 1 : filteredItems.length - 1;
+            setSelectedIndex(nextIdx);
+            if (queryBeforeItemSelectRef.current === null) {
+              queryBeforeItemSelectRef.current = query;
+            }
+            setQueryState(filteredItems[nextIdx].title);
+          }
           break;
         case "Enter":
           e.preventDefault();
+          // Clear preview state if we were arrow-navigating
+          if (queryBeforeItemSelectRef.current !== null) {
+            queryBeforeItemSelectRef.current = null;
+          }
           executeSelected();
           break;
         case "Escape":
           e.preventDefault();
+          if (queryBeforeItemSelectRef.current !== null) {
+            setQueryState(queryBeforeItemSelectRef.current);
+            queryBeforeItemSelectRef.current = null;
+            setFocusInputSignal((prev) => prev + 1);
+            break;
+          }
           if (selectedSuggestionIndex >= 0) {
             restoreQueryFromSuggestionPreview();
             break;
@@ -536,6 +567,7 @@ export function useLauncher(options: UseLauncherOptions) {
     setCurrentParamIndex(0);
     setActiveCommandParams([]);
     setActiveCommandName("");
+    queryBeforeItemSelectRef.current = null;
     fetchItems("");
     fetchCategories();
   }, [fetchItems, fetchCategories, setQuery]);

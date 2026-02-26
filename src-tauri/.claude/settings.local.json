@@ -25,7 +25,12 @@
       "Bash(\"D:\\\\Projects\\\\GoLaunch\\\\target\\\\debug\\\\golaunch-cli.exe\" add --title \"GitHub\" --action-value \"https://github.com\" --action-type url --category \"Web\" --icon \"🐙\" --tags \"github,git,code\")",
       "Bash(\"C:/Users/sjroe/AppData/Local/golaunch/slash-commands/kill.ps1\":*)",
       "mcp__golaunch__slash_commands_add",
-      "mcp__golaunch__slash_commands_run"
+      "mcp__golaunch__slash_commands_run",
+      "mcp__golaunch__slash_commands_remove",
+      "mcp__golaunch__items_remove",
+      "mcp__golaunch__items_run",
+      "mcp__golaunch__items_add",
+      "mcp__golaunch__items_update"
     ]
   }
 }

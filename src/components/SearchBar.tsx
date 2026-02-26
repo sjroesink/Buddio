@@ -1,12 +1,19 @@
-import { useRef, useEffect, useState } from "react";
+import { useRef, useEffect, useCallback } from "react";
 import { listen } from "@tauri-apps/api/event";
 import { AgentStatusIndicator } from "./AgentStatusIndicator";
 import type { AgentStatus } from "../types";
+
+export interface PastedImage {
+  id: string;
+  dataUrl: string;
+  name: string;
+}
 
 interface ContextInfo {
   hasSelection: boolean;
   hasClipboard: boolean;
   sourceApp: string | null;
+  sourceProcessName: string | null;
   selectedText?: string | null;
   clipboardText?: string | null;
 }
@@ -24,92 +31,10 @@ interface SearchBarProps {
   focusSignal?: number;
   onInputFocus?: () => void;
   contextInfo?: ContextInfo;
-}
-
-function ContextDropdown({ contextInfo }: { contextInfo: ContextInfo }) {
-  const [open, setOpen] = useState(false);
-  const ref = useRef<HTMLDivElement>(null);
-
-  // Close on click outside
-  useEffect(() => {
-    if (!open) return;
-    function handleClick(e: MouseEvent) {
-      if (ref.current && !ref.current.contains(e.target as Node)) {
-        setOpen(false);
-      }
-    }
-    document.addEventListener("mousedown", handleClick);
-    return () => document.removeEventListener("mousedown", handleClick);
-  }, [open]);
-
-  const truncate = (text: string, max: number) =>
-    text.length > max ? text.slice(0, max) + "…" : text;
-
-  const badgeColor = contextInfo.hasSelection
-    ? "bg-purple-500/20 text-purple-300 border-purple-500/30"
-    : "bg-blue-500/20 text-blue-300 border-blue-500/30";
-
-  return (
-    <div className="relative mr-2" ref={ref}>
-      <button
-        onClick={() => setOpen((p) => !p)}
-        className={`inline-flex items-center gap-1 px-1.5 py-0.5 rounded text-[10px] font-medium border transition-colors ${badgeColor} hover:brightness-125`}
-        title="Show captured context"
-      >
-        {contextInfo.hasSelection ? (
-          <>
-            <svg className="w-2.5 h-2.5" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
-              <path strokeLinecap="round" strokeLinejoin="round" d="M4 6h16M4 12h8" />
-            </svg>
-            SEL
-          </>
-        ) : (
-          <>
-            <svg className="w-2.5 h-2.5" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
-              <path strokeLinecap="round" strokeLinejoin="round" d="M9 5H7a2 2 0 00-2 2v12a2 2 0 002 2h10a2 2 0 002-2V7a2 2 0 00-2-2h-2M9 5a2 2 0 002 2h2a2 2 0 002-2M9 5a2 2 0 012-2h2a2 2 0 012 2" />
-            </svg>
-            CLIP
-          </>
-        )}
-        <svg
-          className={`w-2.5 h-2.5 transition-transform ${open ? "rotate-180" : ""}`}
-          fill="none"
-          viewBox="0 0 24 24"
-          stroke="currentColor"
-          strokeWidth={2}
-        >
-          <path strokeLinecap="round" strokeLinejoin="round" d="M19 9l-7 7-7-7" />
-        </svg>
-      </button>
-
-      {open && (
-        <div className="absolute bottom-full left-0 mb-1 w-72 rounded-lg bg-launcher-bg border border-launcher-border/50 shadow-xl z-50 overflow-hidden">
-          {contextInfo.sourceApp && (
-            <div className="px-3 py-1.5 border-b border-launcher-border/30">
-              <div className="text-[10px] text-launcher-muted uppercase tracking-wider">Source</div>
-              <div className="text-xs text-launcher-text truncate">{contextInfo.sourceApp}</div>
-            </div>
-          )}
-          {contextInfo.hasSelection && contextInfo.selectedText && (
-            <div className="px-3 py-1.5 border-b border-launcher-border/30">
-              <div className="text-[10px] text-purple-400/70 uppercase tracking-wider">Selected text</div>
-              <div className="text-xs text-launcher-text/80 whitespace-pre-wrap break-words max-h-32 overflow-y-auto leading-relaxed">
-                {truncate(contextInfo.selectedText, 500)}
-              </div>
-            </div>
-          )}
-          {contextInfo.hasClipboard && contextInfo.clipboardText && (
-            <div className="px-3 py-1.5">
-              <div className="text-[10px] text-blue-400/70 uppercase tracking-wider">Clipboard</div>
-              <div className="text-xs text-launcher-text/80 whitespace-pre-wrap break-words max-h-32 overflow-y-auto leading-relaxed">
-                {truncate(contextInfo.clipboardText, 500)}
-              </div>
-            </div>
-          )}
-        </div>
-      )}
-    </div>
-  );
+  contextCount?: number;
+  contextPanelOpen?: boolean;
+  onContextClick?: () => void;
+  onAddImage?: (image: PastedImage) => void;
 }
 
 function SearchBar({
@@ -125,6 +50,10 @@ function SearchBar({
   focusSignal,
   onInputFocus,
   contextInfo,
+  contextCount = 0,
+  contextPanelOpen = false,
+  onContextClick,
+  onAddImage,
 }: SearchBarProps) {
   const inputRef = useRef<HTMLInputElement>(null);
   const isComposer = mode === "composer";
@@ -152,6 +81,37 @@ function SearchBar({
       unlisten.then((fn) => fn());
     };
   }, []);
+
+  // Handle paste events for image detection
+  const handlePaste = useCallback(
+    (e: React.ClipboardEvent) => {
+      if (!onAddImage) return;
+      const items = e.clipboardData?.items;
+      if (!items) return;
+
+      for (let i = 0; i < items.length; i++) {
+        const item = items[i];
+        if (item.type.startsWith("image/")) {
+          e.preventDefault();
+          const blob = item.getAsFile();
+          if (!blob) continue;
+
+          const reader = new FileReader();
+          reader.onload = () => {
+            const dataUrl = reader.result as string;
+            onAddImage({
+              id: crypto.randomUUID(),
+              dataUrl,
+              name: `Image ${new Date().toLocaleTimeString()}`,
+            });
+          };
+          reader.readAsDataURL(blob);
+          return;
+        }
+      }
+    },
+    [onAddImage],
+  );
 
   return (
     <div
@@ -183,68 +143,91 @@ function SearchBar({
           </svg>
         </button>
       )}
-      <div className="flex items-center justify-center w-8 h-8 mr-3 window-drag-region">
+      <div className="flex items-center justify-center mr-3">
         {loading && !isComposer ? (
-          <svg
-            className="w-5 h-5 text-launcher-accent animate-spin"
-            viewBox="0 0 24 24"
-            fill="none"
-          >
-            <circle
-              cx="12"
-              cy="12"
-              r="10"
-              stroke="currentColor"
-              strokeWidth="3"
-              strokeLinecap="round"
-              className="opacity-25"
-            />
-            <path
-              d="M12 2a10 10 0 0 1 10 10"
-              stroke="currentColor"
-              strokeWidth="3"
-              strokeLinecap="round"
-            />
-          </svg>
+          <div className="flex items-center justify-center w-8 h-8 window-drag-region">
+            <svg
+              className="w-5 h-5 text-launcher-accent animate-spin"
+              viewBox="0 0 24 24"
+              fill="none"
+            >
+              <circle
+                cx="12"
+                cy="12"
+                r="10"
+                stroke="currentColor"
+                strokeWidth="3"
+                strokeLinecap="round"
+                className="opacity-25"
+              />
+              <path
+                d="M12 2a10 10 0 0 1 10 10"
+                stroke="currentColor"
+                strokeWidth="3"
+                strokeLinecap="round"
+              />
+            </svg>
+          </div>
         ) : isComposer ? (
-          <svg
-            className="w-5 h-5 text-launcher-muted"
-            fill="none"
-            viewBox="0 0 24 24"
-            stroke="currentColor"
-            strokeWidth={2}
+          <button
+            onClick={onContextClick}
+            className={`relative flex items-center justify-center w-8 h-8 rounded transition-colors ${
+              contextCount > 0
+                ? "text-launcher-text cursor-pointer hover:bg-launcher-hover"
+                : "text-launcher-muted cursor-default"
+            } ${contextPanelOpen ? "bg-launcher-hover" : ""}`}
+            title={
+              contextCount > 0
+                ? `${contextCount} context item${contextCount > 1 ? "s" : ""} (click to view)`
+                : "Composer"
+            }
           >
-            <path
-              strokeLinecap="round"
-              strokeLinejoin="round"
-              d="M8 10h8M8 14h5m-1 8h8a2 2 0 002-2V8a2 2 0 00-2-2h-8l-4 4v10a2 2 0 002 2h2z"
-            />
-          </svg>
+            {/* Compose icon */}
+            <svg
+              className="w-5 h-5"
+              fill="none"
+              viewBox="0 0 24 24"
+              stroke="currentColor"
+              strokeWidth={2}
+            >
+              <path
+                strokeLinecap="round"
+                strokeLinejoin="round"
+                d="M8 10h8M8 14h5m-1 8h8a2 2 0 002-2V8a2 2 0 00-2-2h-8l-4 4v10a2 2 0 002 2h2z"
+              />
+            </svg>
+            {/* Count badge */}
+            {contextCount > 0 && (
+              <span className="absolute -top-0.5 -right-0.5 flex items-center justify-center w-3.5 h-3.5 rounded-full bg-purple-500 text-white text-[8px] font-bold leading-none">
+                {contextCount}
+              </span>
+            )}
+          </button>
         ) : (
-          <svg
-            className="w-5 h-5 text-launcher-muted"
-            fill="none"
-            viewBox="0 0 24 24"
-            stroke="currentColor"
-            strokeWidth={2}
-          >
-            <path
-              strokeLinecap="round"
-              strokeLinejoin="round"
-              d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z"
-            />
-          </svg>
+          <div className="flex items-center justify-center w-8 h-8 window-drag-region">
+            <svg
+              className="w-5 h-5 text-launcher-muted"
+              fill="none"
+              viewBox="0 0 24 24"
+              stroke="currentColor"
+              strokeWidth={2}
+            >
+              <path
+                strokeLinecap="round"
+                strokeLinejoin="round"
+                d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z"
+              />
+            </svg>
+          </div>
         )}
       </div>
-      {contextInfo && (contextInfo.hasSelection || contextInfo.hasClipboard) && (
-        <ContextDropdown contextInfo={contextInfo} />
-      )}
       <input
         data-testid="search-input"
         ref={inputRef}
         type="text"
         value={query}
         onChange={(e) => onQueryChange(e.target.value)}
+        onPaste={handlePaste}
         onFocus={onInputFocus}
         placeholder={
           isComposer

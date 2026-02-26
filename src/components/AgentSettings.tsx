@@ -1,4 +1,4 @@
-import { useState, useEffect } from "react";
+import { useState, useEffect, useRef, useCallback } from "react";
 import { invoke } from "@tauri-apps/api/core";
 import type {
   AgentConfig,
@@ -8,12 +8,6 @@ import type {
 } from "../types";
 
 type SettingsTab = "general" | "agent";
-
-const SHORTCUT_OPTIONS = [
-  { value: "double-caps-lock", label: "Double Caps Lock", description: "Tap Caps Lock twice to toggle" },
-  { value: "ctrl+space", label: "Ctrl + Space", description: "Hold Ctrl and press Space" },
-  { value: "alt+space", label: "Alt + Space", description: "Hold Alt and press Space" },
-] as const;
 
 const NAV_ITEMS: { id: SettingsTab; label: string; icon: string }[] = [
   { id: "general", label: "General", icon: "M10.325 4.317c.426-1.756 2.924-1.756 3.35 0a1.724 1.724 0 002.573 1.066c1.543-.94 3.31.826 2.37 2.37a1.724 1.724 0 001.066 2.573c1.756.426 1.756 2.924 0 3.35a1.724 1.724 0 00-1.066 2.573c.94 1.543-.826 3.31-2.37 2.37a1.724 1.724 0 00-2.573 1.066c-.426 1.756-2.924 1.756-3.35 0a1.724 1.724 0 00-2.573-1.066c-1.543.94-3.31-.826-2.37-2.37a1.724 1.724 0 00-1.066-2.573c-1.756-.426-1.756-2.924 0-3.35a1.724 1.724 0 001.066-2.573c-.94-1.543.826-3.31 2.37-2.37.996.608 2.296.07 2.572-1.065zM15 12a3 3 0 11-6 0 3 3 0 016 0z" },
@@ -49,7 +43,10 @@ export function AgentSettings({
   >({});
   const [loading, setLoading] = useState(true);
   const [installing, setInstalling] = useState<string | null>(null);
-  const [shortcutMode, setShortcutMode] = useState("double-caps-lock");
+  const [shortcutMode, setShortcutMode] = useState("Ctrl+Space");
+  const [isRecording, setIsRecording] = useState(false);
+  const [recordingKeys, setRecordingKeys] = useState("");
+  const recorderRef = useRef<HTMLDivElement>(null);
 
   // Load saved config, fetch registry, check installs
   useEffect(() => {
@@ -98,26 +95,113 @@ export function AgentSettings({
     init();
   }, []);
 
-  // Escape to close
+  // Escape to close (unless recording a hotkey)
   useEffect(() => {
     function handleKeyDown(e: KeyboardEvent) {
-      if (e.key === "Escape") {
+      if (e.key === "Escape" && !isRecording) {
         e.preventDefault();
         onClose();
       }
     }
     window.addEventListener("keydown", handleKeyDown);
     return () => window.removeEventListener("keydown", handleKeyDown);
-  }, [onClose]);
+  }, [onClose, isRecording]);
 
-  async function handleShortcutChange(mode: string) {
-    setShortcutMode(mode);
-    try {
-      await invoke("set_shortcut_mode", { mode });
-    } catch (e) {
-      console.error("Failed to set shortcut mode:", e);
+  function buildShortcutString(e: KeyboardEvent): string | null {
+    // Ignore standalone modifier presses
+    if (["Control", "Alt", "Shift", "Meta"].includes(e.key)) return null;
+
+    const parts: string[] = [];
+    if (e.ctrlKey) parts.push("Ctrl");
+    if (e.altKey) parts.push("Alt");
+    if (e.shiftKey) parts.push("Shift");
+    if (e.metaKey) parts.push("Meta");
+
+    // Map event.key to our key name format
+    let keyName: string;
+    if (e.key === " ") {
+      keyName = "Space";
+    } else if (e.key.length === 1) {
+      keyName = e.key.toUpperCase();
+    } else {
+      // Keys like "Enter", "Tab", "F1", "ArrowUp", etc.
+      keyName = e.key;
     }
+
+    parts.push(keyName);
+    return parts.join("+");
   }
+
+  const [shortcutError, setShortcutError] = useState<string | null>(null);
+
+  const handleRecordKeyDown = useCallback(
+    (e: KeyboardEvent) => {
+      e.preventDefault();
+      e.stopPropagation();
+
+      // Show live preview of modifiers being held
+      const preview: string[] = [];
+      if (e.ctrlKey) preview.push("Ctrl");
+      if (e.altKey) preview.push("Alt");
+      if (e.shiftKey) preview.push("Shift");
+      if (e.metaKey) preview.push("Meta");
+      if (!["Control", "Alt", "Shift", "Meta"].includes(e.key)) {
+        if (e.key === " ") preview.push("Space");
+        else if (e.key.length === 1) preview.push(e.key.toUpperCase());
+        else preview.push(e.key);
+      }
+      setRecordingKeys(preview.join("+"));
+
+      const combo = buildShortcutString(e);
+      if (!combo) return; // Just a modifier, keep waiting
+
+      // Escape cancels recording
+      if (e.key === "Escape" && !e.ctrlKey && !e.altKey && !e.shiftKey && !e.metaKey) {
+        setIsRecording(false);
+        setRecordingKeys("");
+        return;
+      }
+
+      // Must have at least one modifier
+      if (!e.ctrlKey && !e.altKey && !e.shiftKey && !e.metaKey) return;
+
+      // Save the shortcut — only update UI after backend confirms
+      setIsRecording(false);
+      setRecordingKeys("");
+      setShortcutError(null);
+      invoke("set_shortcut_mode", { mode: combo })
+        .then(() => {
+          setShortcutMode(combo);
+        })
+        .catch((err) => {
+          console.error("Failed to set shortcut:", err);
+          setShortcutError(String(err));
+        });
+    },
+    [],
+  );
+
+  // Attach/detach keydown listener when recording
+  useEffect(() => {
+    if (!isRecording) return;
+    window.addEventListener("keydown", handleRecordKeyDown, true);
+    return () => {
+      window.removeEventListener("keydown", handleRecordKeyDown, true);
+    };
+  }, [isRecording, handleRecordKeyDown]);
+
+  // Cancel recording on click outside
+  useEffect(() => {
+    if (!isRecording) return;
+    function handleClick(e: MouseEvent) {
+      if (recorderRef.current && !recorderRef.current.contains(e.target as Node)) {
+        setIsRecording(false);
+        setRecordingKeys("");
+      }
+    }
+    window.addEventListener("mousedown", handleClick);
+    return () => window.removeEventListener("mousedown", handleClick);
+  }, [isRecording]);
 
   function updateEnvValue(agentId: string, envName: string, value: string) {
     setAgentEnvValues((prev) => ({
@@ -209,30 +293,58 @@ export function AgentSettings({
 
   // ── Render sections ──
 
+  function renderKeyBadges(shortcut: string) {
+    return shortcut.split("+").map((key, i) => (
+      <kbd key={i} className="kbd">
+        {key}
+      </kbd>
+    ));
+  }
+
   function renderGeneralSection() {
+    const displayKeys = isRecording ? recordingKeys : shortcutMode;
     return (
       <div className="settings-section-content">
         <div className="settings-section-title">Activation Shortcut</div>
-        <div className="shortcut-options">
-          {SHORTCUT_OPTIONS.map((opt) => (
-            <label
-              key={opt.value}
-              className={`shortcut-option ${shortcutMode === opt.value ? "shortcut-option-active" : ""}`}
-            >
-              <input
-                type="radio"
-                name="shortcut-mode"
-                value={opt.value}
-                checked={shortcutMode === opt.value}
-                onChange={() => handleShortcutChange(opt.value)}
-              />
-              <div className="shortcut-option-content">
-                <span className="shortcut-option-label">{opt.label}</span>
-                <span className="shortcut-option-desc">{opt.description}</span>
-              </div>
-            </label>
-          ))}
+        <div
+          ref={recorderRef}
+          className={`hotkey-input ${isRecording ? "hotkey-recording" : ""}`}
+          onClick={() => {
+            if (!isRecording) {
+              setIsRecording(true);
+              setRecordingKeys("");
+            }
+          }}
+        >
+          <div className="hotkey-keys">
+            {isRecording && !recordingKeys ? (
+              <span className="hotkey-placeholder">Press a key combination...</span>
+            ) : (
+              renderKeyBadges(displayKeys || shortcutMode)
+            )}
+          </div>
+          <button
+            className="hotkey-action-btn"
+            onClick={(e) => {
+              e.stopPropagation();
+              if (isRecording) {
+                setIsRecording(false);
+                setRecordingKeys("");
+              } else {
+                setIsRecording(true);
+                setRecordingKeys("");
+                setShortcutError(null);
+              }
+            }}
+          >
+            {isRecording ? "Cancel" : "Change"}
+          </button>
         </div>
+        {shortcutError && (
+          <div className="text-[11px] text-red-400 mt-1.5 px-1">
+            Failed to register shortcut: {shortcutError}
+          </div>
+        )}
       </div>
     );
   }

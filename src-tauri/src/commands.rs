@@ -96,40 +96,27 @@ pub fn execute_item(
             Ok(None)
         }
         "command" | "script" => {
+            // Fire-and-forget: spawn the process without waiting so GoLaunch
+            // never freezes on long-running or interactive commands.
             #[cfg(target_os = "windows")]
-            let output = {
+            {
+                use std::os::windows::process::CommandExt;
+                const CREATE_NO_WINDOW: u32 = 0x08000000;
                 std::process::Command::new("powershell")
                     .args(["-NoProfile", "-Command", &item.action_value])
-                    .output()
-                    .map_err(|e| format!("Failed to execute command: {e}"))?
-            };
+                    .creation_flags(CREATE_NO_WINDOW)
+                    .spawn()
+                    .map_err(|e| format!("Failed to execute command: {e}"))?;
+            }
             #[cfg(not(target_os = "windows"))]
-            let output = {
+            {
                 std::process::Command::new("sh")
                     .args(["-c", &item.action_value])
-                    .output()
-                    .map_err(|e| format!("Failed to execute command: {e}"))?
-            };
-
-            let stdout = String::from_utf8_lossy(&output.stdout).to_string();
-            let stderr = String::from_utf8_lossy(&output.stderr).to_string();
-
-            if !output.status.success() && !stderr.is_empty() {
-                return Err(stderr);
+                    .spawn()
+                    .map_err(|e| format!("Failed to execute command: {e}"))?;
             }
 
-            let combined = if stderr.is_empty() {
-                stdout
-            } else {
-                format!("{stdout}\n{stderr}")
-            };
-            let trimmed = combined.trim().to_string();
-
-            if trimmed.is_empty() {
-                Ok(None)
-            } else {
-                Ok(Some(trimmed))
-            }
+            Ok(None)
         }
         other => Err(format!("Unknown action type: {other}")),
     }
@@ -808,7 +795,7 @@ pub fn get_slash_command_params(name: String) -> Result<Vec<SlashCommandParam>, 
 #[tauri::command]
 pub fn get_shortcut_mode(state: tauri::State<'_, HotkeyState>) -> Result<String, String> {
     let mgr = state.0.lock().map_err(|e| format!("{e}"))?;
-    Ok(mgr.mode().as_str().to_string())
+    Ok(mgr.shortcut_str().to_string())
 }
 
 #[tauri::command]
@@ -818,7 +805,7 @@ pub fn set_shortcut_mode(
     mode: String,
 ) -> Result<(), String> {
     let mut mgr = state.0.lock().map_err(|e| format!("{e}"))?;
-    mgr.switch_mode(&app, &mode)?;
+    mgr.switch_shortcut(&app, &mode)?;
     let db = Database::new()?;
     db.set_setting(hotkey::SETTING_KEY, &mode)?;
     Ok(())
