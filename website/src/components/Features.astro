@@ -4,39 +4,57 @@ import FeatureCard from "./FeatureCard.astro";
 const features = [
   {
     icon: "&#9000;",
-    title: "Keyboard-First",
+    title: "Keyboard-Only Flow",
     description:
-      "Navigate, search, and execute entirely from the keyboard. Arrow keys, Tab, Enter — no mouse required.",
+      "Search, preview, filter by category, and execute actions without touching your mouse.",
   },
   {
-    icon: "&#9889;",
-    title: "Global Shortcut",
+    icon: "&#127919;",
+    title: "Slash Command Mode",
     description:
-      "Ctrl+Space summons the launcher instantly from any application. Always one shortcut away.",
-  },
-  {
-    icon: "&#127760;",
-    title: "Cross-Platform",
-    description:
-      "Runs natively on Windows, macOS, and Linux. Powered by Tauri for a small footprint and fast startup.",
-  },
-  {
-    icon: "&#128451;",
-    title: "SQLite Storage",
-    description:
-      "Lightweight local database shared between the app and CLI. Your data stays on your machine.",
-  },
-  {
-    icon: "&#62;&#95;",
-    title: "Scriptable CLI",
-    description:
-      "Manage items, import/export JSON, and automate your launcher with buddio-cli from any terminal.",
+      "Type '/' to list commands, search by name, enter parameters, and run scripts directly.",
   },
   {
     icon: "&#129302;",
-    title: "AI Agent Ready",
+    title: "AI-Created Commands",
     description:
-      "Connect AI agents via the Agent Communication Protocol. Natural language queries, tool use, and more.",
+      "No command yet? Press Enter and Buddio can ask your connected agent to create one for you.",
+  },
+  {
+    icon: "&#128272;",
+    title: "Permission Guardrails",
+    description:
+      "Agent tool calls are shown in-line with explicit allow/deny choices, so you stay in control.",
+  },
+  {
+    icon: "&#128203;",
+    title: "Rich Context Capture",
+    description:
+      "Buddio can include selected text, clipboard text, source app, and pasted images in agent prompts.",
+  },
+  {
+    icon: "&#128161;",
+    title: "Smart Suggestions",
+    description:
+      "When no item matches, Buddio suggests commands from history and lets you save them instantly.",
+  },
+  {
+    icon: "&#128172;",
+    title: "Conversation + Rewrite Memory",
+    description:
+      "Resume conversation history and quickly reuse recent rewrite prompts from selection workflows.",
+  },
+  {
+    icon: "&#9889;",
+    title: "Configurable Hotkey + Tray",
+    description:
+      "Set your preferred shortcut and open Buddio from the tray menu in one click.",
+  },
+  {
+    icon: "&#62;&#95;",
+    title: "Optional CLI",
+    description:
+      "Terminal users can still import/export or automate via buddio-cli, but the app works great without it.",
   },
 ];
 ---
@@ -46,11 +64,11 @@ const features = [
     <!-- Section header -->
     <div class="mb-16 text-center">
       <h2 class="section-heading mb-4">
-        Everything you need,
-        <span class="gradient-text">nothing you don&apos;t</span>
+        What Buddio can do
+        <span class="gradient-text">right now</span>
       </h2>
       <p class="section-subheading mx-auto">
-        Built for developers who value speed, simplicity, and control.
+        Current launcher features, including slash commands and agent workflows.
       </p>
     </div>
 

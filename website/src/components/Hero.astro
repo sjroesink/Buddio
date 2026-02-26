@@ -1,52 +1,59 @@
 ---
+const logoSrc = `${import.meta.env.BASE_URL.replace(/\/$/, "")}/buddio-wordmark.svg`;
 ---
 
-<section class="relative flex min-h-screen items-center justify-center overflow-hidden pt-20">
-  <!-- Animated background blobs -->
+<section class="relative flex min-h-screen items-center justify-center overflow-hidden pt-24">
   <div class="pointer-events-none absolute inset-0">
+    <div class="hero-blob left-[12%] top-[12%] h-80 w-80 bg-orange-400/20 animate-pulse-glow"></div>
     <div
-      class="hero-blob left-1/4 top-1/4 h-96 w-96 bg-launcher-accent/20 animate-pulse-glow"
-    >
-    </div>
+      class="hero-blob right-[10%] top-[18%] h-72 w-72 bg-sky-400/20 animate-pulse-glow"
+      style="animation-delay: 1.5s;"
+    ></div>
     <div
-      class="hero-blob right-1/4 bottom-1/3 h-80 w-80 bg-purple-600/15 animate-pulse-glow"
-      style="animation-delay: 2s;"
-    >
-    </div>
-    <div
-      class="hero-blob left-1/2 top-1/2 h-64 w-64 -translate-x-1/2 -translate-y-1/2 bg-blue-600/10 animate-pulse-glow"
-      style="animation-delay: 4s;"
-    >
-    </div>
+      class="hero-blob bottom-[8%] left-1/2 h-72 w-72 -translate-x-1/2 bg-amber-500/20 animate-pulse-glow"
+      style="animation-delay: 3s;"
+    ></div>
   </div>
 
-  <!-- Content -->
   <div class="relative z-10 mx-auto max-w-5xl px-6 text-center">
-    <!-- Badge -->
-    <div class="badge mb-8 inline-flex items-center gap-2 rounded-full px-4 py-1.5 text-sm animate-fade-in">
-      <span class="h-2 w-2 rounded-full bg-green-500 animate-pulse"></span>
-      Open Source &mdash; Built with Tauri
+    <div class="mx-auto mb-8 max-w-3xl animate-fade-in">
+      <div class="rounded-3xl border border-white/20 bg-[#2b1a0f]/88 p-6 shadow-2xl sm:p-8">
+        <img
+          src={logoSrc}
+          alt="Buddio"
+          class="mx-auto w-full max-w-[42rem]"
+          loading="eager"
+          decoding="async"
+        />
+      </div>
     </div>
 
-    <!-- Headline -->
     <h1
-      class="section-heading mb-6 !text-5xl !font-extrabold !leading-tight md:!text-7xl animate-slide-up"
+      class="section-heading mb-5 !text-4xl !font-extrabold !leading-tight sm:!text-5xl md:!text-6xl animate-slide-up"
     >
-      Your Keyboard-First
+      Meet your desktop dog helper.
       <br />
-      <span class="gradient-text">Launcher</span>
+      <span class="gradient-text">Ask Buddio anything.</span>
     </h1>
 
-    <!-- Subtitle -->
     <p
-      class="mx-auto mb-10 max-w-2xl text-lg text-launcher-muted md:text-xl animate-slide-up"
-      style="animation-delay: 0.1s; opacity: 0;"
+      class="mx-auto mb-8 max-w-3xl text-lg text-launcher-muted md:text-xl animate-slide-up"
+      style="animation-delay: 0.08s; opacity: 0;"
     >
-      A fast, AI-powered launcher for developers. Search, execute, and automate
-      &mdash; all from the keyboard. With built-in AI agent integration.
+      Buddio keeps your launcher fast and friendly: instant search, slash commands,
+      AI chat, and context-aware actions from one keyboard workflow.
     </p>
 
-    <!-- CTAs -->
+    <div
+      class="mb-10 flex flex-wrap items-center justify-center gap-2.5 text-sm animate-slide-up"
+      style="animation-delay: 0.14s; opacity: 0;"
+    >
+      <span class="badge rounded-full px-3 py-1.5">/summarize release-notes.md</span>
+      <span class="badge rounded-full px-3 py-1.5">/deploy staging</span>
+      <span class="badge rounded-full px-3 py-1.5">Rewrite selected text</span>
+      <span class="badge rounded-full px-3 py-1.5">Ctrl+S to save suggestions</span>
+    </div>
+
     <div
       class="flex flex-col items-center justify-center gap-4 sm:flex-row animate-slide-up"
       style="animation-delay: 0.2s; opacity: 0;"
@@ -68,108 +75,38 @@
             d="M3.5 12.75a.75.75 0 0 0-1.5 0v2.5A2.75 2.75 0 0 0 4.75 18h10.5A2.75 2.75 0 0 0 18 15.25v-2.5a.75.75 0 0 0-1.5 0v2.5c0 .69-.56 1.25-1.25 1.25H4.75c-.69 0-1.25-.56-1.25-1.25v-2.5Z"
           ></path>
         </svg>
-        Download
+        Download Buddio
       </a>
       <a
-        href="https://github.com/sjroesink/Buddio"
-        target="_blank"
-        rel="noopener noreferrer"
+        href="#slash"
         class="btn-ghost inline-flex items-center gap-2 rounded-xl px-8 py-3.5 text-base font-semibold transition-all"
       >
-        <svg viewBox="0 0 24 24" fill="currentColor" class="h-5 w-5">
-          <path
-            d="M12 0c-6.626 0-12 5.373-12 12 0 5.302 3.438 9.8 8.207 11.387.599.111.793-.261.793-.577v-2.234c-3.338.726-4.033-1.416-4.033-1.416-.546-1.387-1.333-1.756-1.333-1.756-1.089-.745.083-.729.083-.729 1.205.084 1.839 1.237 1.839 1.237 1.07 1.834 2.807 1.304 3.492.997.107-.775.418-1.305.762-1.604-2.665-.305-5.467-1.334-5.467-5.931 0-1.311.469-2.381 1.236-3.221-.124-.303-.535-1.524.117-3.176 0 0 1.008-.322 3.301 1.23.957-.266 1.983-.399 3.003-.404 1.02.005 2.047.138 3.006.404 2.291-1.552 3.297-1.23 3.297-1.23.653 1.653.242 2.874.118 3.176.77.84 1.235 1.911 1.235 3.221 0 4.609-2.807 5.624-5.479 5.921.43.372.823 1.102.823 2.222v3.293c0 .319.192.694.801.576 4.765-1.589 8.199-6.086 8.199-11.386 0-6.627-5.373-12-12-12z"
-          ></path>
-        </svg>
-        View on GitHub
+        Explore Slash Commands
       </a>
     </div>
 
-    <!-- App mockup (always dark - it's the app UI) -->
     <div
-      class="mx-auto mt-16 max-w-2xl animate-slide-up"
-      style="animation-delay: 0.3s; opacity: 0;"
+      class="mx-auto mt-14 max-w-3xl animate-slide-up"
+      style="animation-delay: 0.28s; opacity: 0;"
     >
-      <div class="overflow-hidden rounded-2xl border border-white/10 bg-white/5 p-1 glow-accent" style="background: rgba(26, 26, 46, 0.95);">
-        <!-- Window title bar -->
-        <div
-          class="flex items-center gap-2 rounded-t-xl px-4 py-3"
-          style="background: #16213e;"
-        >
+      <div
+        class="overflow-hidden rounded-2xl border border-white/20 p-1 shadow-2xl"
+        style="background: rgba(35, 21, 12, 0.95);"
+      >
+        <div class="flex items-center gap-2 rounded-t-xl px-4 py-3" style="background: #2d1b10;">
           <div class="flex gap-1.5">
             <div class="h-3 w-3 rounded-full bg-red-500/60"></div>
             <div class="h-3 w-3 rounded-full bg-yellow-500/60"></div>
             <div class="h-3 w-3 rounded-full bg-green-500/60"></div>
           </div>
-          <div class="ml-2 text-xs" style="color: #8892a4;">Buddio</div>
+          <div class="ml-2 text-xs text-amber-100/70">Buddio helper chat</div>
         </div>
-        <!-- Search bar mockup -->
-        <div class="p-4" style="background: #1a1a2e;">
-          <div
-            class="flex items-center gap-3 rounded-lg px-4 py-3"
-            style="border: 1px solid #0f3460; background: #16213e;"
-          >
-            <svg
-              xmlns="http://www.w3.org/2000/svg"
-              viewBox="0 0 20 20"
-              fill="currentColor"
-              class="h-5 w-5"
-              style="color: #8892a4;"
-            >
-              <path
-                fill-rule="evenodd"
-                d="M9 3.5a5.5 5.5 0 1 0 0 11 5.5 5.5 0 0 0 0-11ZM2 9a7 7 0 1 1 12.452 4.391l3.328 3.329a.75.75 0 1 1-1.06 1.06l-3.329-3.328A7 7 0 0 1 2 9Z"
-                clip-rule="evenodd"></path>
-            </svg>
-            <span style="color: #8892a4;">Type to search...</span>
-            <div class="ml-auto flex gap-1">
-              <kbd
-                class="rounded px-1.5 py-0.5 text-xs"
-                style="background: rgba(15, 52, 96, 0.5); color: #8892a4;"
-                >Ctrl</kbd
-              >
-              <kbd
-                class="rounded px-1.5 py-0.5 text-xs"
-                style="background: rgba(15, 52, 96, 0.5); color: #8892a4;"
-                >Space</kbd
-              >
-            </div>
+        <div class="space-y-3 p-4 text-left" style="background: #23150c;">
+          <div class="rounded-lg bg-white/5 px-4 py-3 text-sm text-amber-100/90">
+            You: Buddio, clean this commit message and summarize changed files.
           </div>
-          <!-- Result items -->
-          <div class="mt-2 space-y-1">
-            <div
-              class="flex items-center gap-3 rounded-lg px-4 py-2.5"
-              style="background: rgba(15, 52, 96, 0.5);"
-            >
-              <span class="text-base">&#127760;</span>
-              <div>
-                <div class="text-sm font-medium text-white">Open GitHub</div>
-                <div class="text-xs" style="color: #8892a4;">URL &middot; Development</div>
-              </div>
-              <kbd
-                class="ml-auto rounded px-1.5 py-0.5 text-xs"
-                style="background: rgba(15, 52, 96, 0.5); color: #8892a4;"
-                >&#8629;</kbd
-              >
-            </div>
-            <div
-              class="flex items-center gap-3 rounded-lg px-4 py-2.5"
-            >
-              <span class="text-base">&#9881;&#65039;</span>
-              <div>
-                <div class="text-sm font-medium text-white">Deploy to Production</div>
-                <div class="text-xs" style="color: #8892a4;">Script &middot; DevOps</div>
-              </div>
-            </div>
-            <div
-              class="flex items-center gap-3 rounded-lg px-4 py-2.5"
-            >
-              <span class="text-base">&#129302;</span>
-              <div>
-                <div class="text-sm font-medium text-white">Ask AI Agent</div>
-                <div class="text-xs" style="color: #8892a4;">ACP &middot; AI</div>
-              </div>
-            </div>
+          <div class="rounded-lg border border-amber-500/25 bg-amber-500/10 px-4 py-3 text-sm text-amber-50">
+            Buddio: Done. I also created <code class="rounded bg-black/20 px-1 py-0.5 text-xs">/summarize-pr</code> so you can reuse this flow.
           </div>
         </div>
       </div>

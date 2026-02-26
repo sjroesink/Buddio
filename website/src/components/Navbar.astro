@@ -3,16 +3,15 @@ import ThemeToggle from "./ThemeToggle.astro";
 
 const links = [
   { href: "#features", label: "Features" },
+  { href: "#slash", label: "Slash Commands" },
   { href: "#ai", label: "AI" },
-  { href: "#cli", label: "CLI" },
   { href: "#download", label: "Download" },
 ];
 const logoSrc = `${import.meta.env.BASE_URL.replace(/\/$/, "")}/buddio-wordmark.svg`;
 ---
 
 <nav
-  class="fixed top-0 left-0 right-0 z-50 border-b bg-launcher-bg/80 backdrop-blur-xl"
-  style="border-color: var(--glass-border);"
+  class="fixed top-0 left-0 right-0 z-50 border-b border-white/10 bg-[#2c1b10]/90 text-amber-50 backdrop-blur-xl"
 >
   <div class="mx-auto flex max-w-6xl items-center justify-between px-6 py-4">
     <!-- Logo -->
@@ -20,7 +19,7 @@ const logoSrc = `${import.meta.env.BASE_URL.replace(/\/$/, "")}/buddio-wordmark.
       <img
         src={logoSrc}
         alt="Buddio"
-        class="h-9 w-auto transition-opacity group-hover:opacity-90"
+        class="h-10 w-auto transition-opacity group-hover:opacity-90"
         loading="eager"
         decoding="async"
       />
@@ -32,7 +31,7 @@ const logoSrc = `${import.meta.env.BASE_URL.replace(/\/$/, "")}/buddio-wordmark.
         links.map((link) => (
           <a
             href={link.href}
-            class="text-sm text-launcher-muted transition-colors hover:text-launcher-text"
+            class="text-sm text-amber-100/80 transition-colors hover:text-white"
           >
             {link.label}
           </a>
@@ -47,8 +46,7 @@ const logoSrc = `${import.meta.env.BASE_URL.replace(/\/$/, "")}/buddio-wordmark.
         href="https://github.com/sjroesink/Buddio"
         target="_blank"
         rel="noopener noreferrer"
-        class="flex items-center gap-2 rounded-lg px-4 py-2 text-sm text-launcher-muted transition-all hover:text-launcher-text"
-        style="border: 1px solid var(--glass-border);"
+        class="flex items-center gap-2 rounded-lg border border-white/20 px-4 py-2 text-sm text-amber-100 transition-all hover:border-white/40 hover:text-white"
       >
         <svg viewBox="0 0 24 24" fill="currentColor" class="h-4 w-4">
           <path

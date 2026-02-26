@@ -1,34 +1,38 @@
 /* Theme variables — outside @layer so Tailwind won't purge them */
 :root {
-  --color-bg: #f8f9fc;
-  --color-surface: #ffffff;
-  --color-border: #e2e5ed;
-  --color-text: #1a1a2e;
-  --color-muted: #64698a;
-  --color-hover: #f0f1f5;
-  --color-selected: #ebedf3;
-  --glass-bg: rgba(255, 255, 255, 0.6);
-  --glass-border: rgba(0, 0, 0, 0.08);
-  --code-bg: rgba(0, 0, 0, 0.04);
-  --heading-color: #1a1a2e;
-  --badge-bg: rgba(0, 0, 0, 0.04);
-  --badge-border: rgba(0, 0, 0, 0.08);
+  --color-bg: #fff8ef;
+  --color-surface: #fffdf8;
+  --color-border: #f2d8b3;
+  --color-text: #2e2418;
+  --color-muted: #806a50;
+  --color-hover: #fff0dc;
+  --color-selected: #ffe5c1;
+  --glass-bg: rgba(255, 248, 239, 0.72);
+  --glass-border: rgba(130, 83, 31, 0.18);
+  --code-bg: rgba(130, 83, 31, 0.08);
+  --heading-color: #24190f;
+  --badge-bg: rgba(217, 119, 6, 0.08);
+  --badge-border: rgba(217, 119, 6, 0.24);
+  --accent-glow: 217, 119, 6;
+  --accent-secondary: 56, 189, 248;
 }
 
 .dark {
-  --color-bg: #1a1a2e;
-  --color-surface: #16213e;
-  --color-border: #0f3460;
-  --color-text: #eaeaea;
-  --color-muted: #8892a4;
-  --color-hover: #1e2d50;
-  --color-selected: #0f3460;
-  --glass-bg: rgba(255, 255, 255, 0.05);
-  --glass-border: rgba(255, 255, 255, 0.1);
-  --code-bg: rgba(255, 255, 255, 0.05);
-  --heading-color: #ffffff;
-  --badge-bg: rgba(255, 255, 255, 0.05);
-  --badge-border: rgba(255, 255, 255, 0.1);
+  --color-bg: #1d130b;
+  --color-surface: #2a1b10;
+  --color-border: #5a3a1c;
+  --color-text: #fff0dc;
+  --color-muted: #c6ae90;
+  --color-hover: #372213;
+  --color-selected: #4a2c14;
+  --glass-bg: rgba(42, 27, 16, 0.78);
+  --glass-border: rgba(255, 214, 161, 0.17);
+  --code-bg: rgba(255, 214, 161, 0.09);
+  --heading-color: #fff7eb;
+  --badge-bg: rgba(245, 158, 11, 0.16);
+  --badge-border: rgba(245, 158, 11, 0.32);
+  --accent-glow: 251, 146, 60;
+  --accent-secondary: 125, 211, 252;
 }
 
 @tailwind base;
@@ -42,11 +46,15 @@
 
   body {
     @apply bg-launcher-bg text-launcher-text antialiased;
+    background-image:
+      radial-gradient(circle at 8% 4%, rgba(var(--accent-secondary), 0.2), transparent 34%),
+      radial-gradient(circle at 86% 20%, rgba(var(--accent-glow), 0.23), transparent 36%);
+    background-attachment: fixed;
     transition: background-color 0.3s ease, color 0.3s ease;
   }
 
   ::selection {
-    background: rgba(233, 69, 96, 0.3);
+    background: rgba(var(--accent-glow), 0.3);
     color: white;
   }
 }
@@ -61,19 +69,19 @@
   }
 
   .gradient-text {
-    @apply bg-clip-text text-transparent bg-gradient-to-r from-launcher-accent via-pink-400 to-purple-400;
+    @apply bg-clip-text text-transparent bg-gradient-to-r from-orange-500 via-amber-400 to-sky-500;
   }
 
   .glow-accent {
     box-shadow:
-      0 0 30px rgba(233, 69, 96, 0.15),
-      0 0 60px rgba(233, 69, 96, 0.05);
+      0 0 30px rgba(var(--accent-glow), 0.2),
+      0 0 60px rgba(var(--accent-glow), 0.08);
   }
 
   .dark .glow-accent {
     box-shadow:
-      0 0 40px rgba(233, 69, 96, 0.3),
-      0 0 80px rgba(233, 69, 96, 0.1);
+      0 0 42px rgba(var(--accent-glow), 0.28),
+      0 0 84px rgba(var(--accent-glow), 0.1);
   }
 
   .hero-blob {
@@ -82,7 +90,7 @@
   }
 
   .section-heading {
-    @apply text-3xl md:text-4xl font-bold tracking-tight;
+    @apply font-display text-3xl md:text-4xl font-bold tracking-tight;
     color: var(--heading-color);
   }
 

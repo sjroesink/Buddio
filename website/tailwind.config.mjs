@@ -9,7 +9,7 @@ export default {
           bg: "var(--color-bg)",
           surface: "var(--color-surface)",
           border: "var(--color-border)",
-          accent: "#e94560",
+          accent: "#d97706",
           text: "var(--color-text)",
           muted: "var(--color-muted)",
           hover: "var(--color-hover)",
@@ -18,15 +18,13 @@ export default {
       },
       fontFamily: {
         sans: [
-          "Inter",
-          "-apple-system",
-          "BlinkMacSystemFont",
+          "Nunito",
+          "Avenir Next",
           "Segoe UI",
-          "Roboto",
-          "Helvetica Neue",
-          "Arial",
+          "Trebuchet MS",
           "sans-serif",
         ],
+        display: ["Baloo 2", "Nunito", "sans-serif"],
         mono: ["JetBrains Mono", "SF Mono", "Fira Code", "monospace"],
       },
       animation: {

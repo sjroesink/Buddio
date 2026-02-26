@@ -5,7 +5,7 @@
   <!-- Background accent -->
   <div class="pointer-events-none absolute inset-0 overflow-hidden">
     <div
-      class="absolute -right-32 top-1/2 h-96 w-96 -translate-y-1/2 rounded-full bg-purple-600/10 blur-3xl"
+      class="absolute -right-32 top-1/2 h-96 w-96 -translate-y-1/2 rounded-full bg-orange-500/12 blur-3xl"
     >
     </div>
   </div>
@@ -15,7 +15,7 @@
       <!-- Text content -->
       <div class="animate-slide-up" style="opacity: 0;">
         <div
-          class="mb-4 inline-flex items-center gap-2 rounded-full border border-purple-500/20 bg-purple-500/10 px-3 py-1 text-sm text-purple-500 dark:text-purple-300"
+          class="mb-4 inline-flex items-center gap-2 rounded-full border border-launcher-accent/25 bg-launcher-accent/10 px-3 py-1 text-sm text-launcher-accent"
         >
           <svg
             xmlns="http://www.w3.org/2000/svg"
@@ -27,20 +27,22 @@
               d="M15.98 1.804a1 1 0 0 0-1.96 0l-.24 1.192a1 1 0 0 1-.784.785l-1.192.238a1 1 0 0 0 0 1.962l1.192.238a1 1 0 0 1 .785.785l.238 1.192a1 1 0 0 0 1.962 0l.238-1.192a1 1 0 0 1 .785-.785l1.192-.238a1 1 0 0 0 0-1.962l-1.192-.238a1 1 0 0 1-.785-.785l-.238-1.192ZM6.949 5.684a1 1 0 0 0-1.898 0l-.683 2.051a1 1 0 0 1-.633.633l-2.051.683a1 1 0 0 0 0 1.898l2.051.684a1 1 0 0 1 .633.632l.683 2.051a1 1 0 0 0 1.898 0l.683-2.051a1 1 0 0 1 .633-.633l2.051-.683a1 1 0 0 0 0-1.898l-2.051-.683a1 1 0 0 1-.633-.633L6.95 5.684ZM13.949 13.684a1 1 0 0 0-1.898 0l-.184.551a1 1 0 0 1-.632.633l-.551.183a1 1 0 0 0 0 1.898l.551.183a1 1 0 0 1 .633.633l.183.551a1 1 0 0 0 1.898 0l.184-.551a1 1 0 0 1 .632-.633l.551-.183a1 1 0 0 0 0-1.898l-.551-.184a1 1 0 0 1-.633-.632l-.183-.551Z"
             ></path>
           </svg>
-          AI-Powered
+          Ask Buddio Anything
         </div>
 
         <h2 class="section-heading mb-6">
-          Your launcher,
-          <span class="gradient-text">supercharged with AI</span>
+          Your desktop helper
+          <span class="gradient-text">that understands context</span>
         </h2>
 
         <div class="space-y-4">
           {[
-            { bold: "Natural language fallback.", rest: "When no launcher match is found, your query is forwarded to the connected AI agent." },
-            { bold: "Permission system.", rest: "Agents request approval before taking sensitive actions. You stay in control." },
-            { bold: "Context-aware.", rest: "Captures clipboard content and selected text to provide rich context to agents." },
-            { bold: "Agent Communication Protocol.", rest: "Open standard (ACP 0.9) — connect any compatible agent." },
+            { bold: "Natural language fallback.", rest: "When nothing matches, Buddio sends your query to the connected agent." },
+            { bold: "Permission checks in-line.", rest: "Sensitive tool calls require explicit approval before they run." },
+            { bold: "Context-aware prompts.", rest: "Selected text, clipboard content, source app, and pasted images can be included." },
+            { bold: "ACP-compatible integration.", rest: "Connect supported agents and manage options from Buddio settings." },
+            { bold: "Conversation memory.", rest: "Reopen previous conversations and keep your workflow moving." },
+            { bold: "Selection rewrites.", rest: "Reuse recent rewrite prompts for fast edit loops." },
           ].map((item) => (
             <div class="flex items-start gap-3">
               <div class="mt-1 flex h-6 w-6 shrink-0 items-center justify-center rounded-full bg-launcher-accent/20 text-launcher-accent">
@@ -77,13 +79,13 @@
                 xmlns="http://www.w3.org/2000/svg"
                 viewBox="0 0 20 20"
                 fill="currentColor"
-                class="h-3.5 w-3.5 text-purple-400"
+                class="h-3.5 w-3.5 text-orange-300"
               >
                 <path
                   d="M15.98 1.804a1 1 0 0 0-1.96 0l-.24 1.192a1 1 0 0 1-.784.785l-1.192.238a1 1 0 0 0 0 1.962l1.192.238a1 1 0 0 1 .785.785l.238 1.192a1 1 0 0 0 1.962 0l.238-1.192a1 1 0 0 1 .785-.785l1.192-.238a1 1 0 0 0 0-1.962l-1.192-.238a1 1 0 0 1-.785-.785l-.238-1.192Z"
                 ></path>
               </svg>
-              AI Agent Mode
+              Buddio Agent Mode
             </div>
           </div>
 
@@ -94,7 +96,7 @@
               <div
                 class="max-w-[80%] rounded-2xl rounded-br-md bg-launcher-accent/20 px-4 py-2.5 text-sm text-white"
               >
-                What containers are running on my machine?
+                Buddio, summarize this PR and suggest a release note.
               </div>
             </div>
 
@@ -105,18 +107,16 @@
                 style="background: #16213e;"
               >
                 <p class="mb-2" style="color: #eaeaea;">
-                  I&apos;ll check your running Docker containers:
+                  I can do that. I&apos;ll run the slash command and refine the note:
                 </p>
                 <div
                   class="rounded-lg px-3 py-2 font-mono text-xs"
                   style="background: rgba(26, 26, 46, 0.8); color: #8892a4;"
                 >
-                  <span class="text-green-400">$</span> docker ps --format
-                  &quot;table &#123;&#123;.Names&#125;&#125;\t&#123;&#123;.Status&#125;&#125;&quot;
+                  <span class="text-green-400">$</span> /summarize-pr feature/agent-permissions
                 </div>
                 <p class="mt-2" style="color: #eaeaea;">
-                  You have <span class="font-medium text-white">3 containers</span>
-                  running: postgres, redis, and nginx.
+                  Drafted a concise release note and proposed 2 follow-up tasks.
                 </p>
               </div>
             </div>
@@ -139,7 +139,7 @@
               <span class="text-yellow-200/80"
                 >Agent requests permission to run <code
                   class="rounded bg-yellow-500/10 px-1 font-mono text-xs"
-                  >docker ps</code
+                  >/summarize-pr feature/agent-permissions</code
                 ></span
               >
               <div class="ml-auto flex gap-2">

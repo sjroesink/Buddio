@@ -2,129 +2,73 @@
 import TerminalBlock from "./TerminalBlock.astro";
 ---
 
-<section id="cli" class="relative py-32">
-  <!-- Background accent -->
+<section id="slash" class="relative py-32">
   <div class="pointer-events-none absolute inset-0 overflow-hidden">
-    <div
-      class="absolute -left-32 top-1/3 h-80 w-80 rounded-full bg-launcher-accent/8 blur-3xl"
-    >
-    </div>
+    <div class="absolute -left-24 top-1/3 h-80 w-80 rounded-full bg-sky-400/12 blur-3xl"></div>
+    <div class="absolute -right-24 bottom-1/4 h-72 w-72 rounded-full bg-orange-500/12 blur-3xl"></div>
   </div>
 
   <div class="relative mx-auto max-w-6xl px-6">
     <div class="grid items-center gap-12 lg:grid-cols-2">
-      <!-- Terminal mockup (always dark) -->
-      <div
-        class="order-2 lg:order-1 animate-slide-up"
-        style="opacity: 0;"
-      >
-        <TerminalBlock title="buddio-cli">
+      <div class="order-2 animate-slide-up lg:order-1" style="opacity: 0;">
+        <TerminalBlock title="Slash command flow">
           <div class="space-y-4">
-            <!-- Command 1 -->
             <div>
-              <div style="color: #8892a4;">
+              <div style="color: #c6ae90;">
                 <span class="text-green-400">$</span>
-                <span class="text-white"> buddio-cli</span>
-                <span style="color: #e94560;"> add</span>
-                <span class="text-yellow-300"> --title</span>
-                <span class="text-cyan-300">"Deploy Staging"</span>
-                <span class="text-white"> \</span>
+                <span class="text-amber-100"> /deploy</span>
               </div>
-              <div class="pl-4" style="color: #8892a4;">
-                <span class="text-yellow-300">--action-type</span>
-                <span class="text-cyan-300"> script</span>
-                <span class="text-white"> \</span>
-              </div>
-              <div class="pl-4" style="color: #8892a4;">
-                <span class="text-yellow-300">--action-value</span>
-                <span class="text-cyan-300">"./deploy.sh staging"</span>
-                <span class="text-white"> \</span>
-              </div>
-              <div class="pl-4" style="color: #8892a4;">
-                <span class="text-yellow-300">--category</span>
-                <span class="text-cyan-300">"DevOps"</span>
-              </div>
-              <div class="mt-1 text-green-400/80">
-                &#10003; Added &quot;Deploy Staging&quot; to launcher
+              <div class="pl-4" style="color: #c6ae90;">
+                <span class="text-amber-300">Parameters:</span>
+                <span class="text-cyan-200"> environment, tag</span>
               </div>
             </div>
-
-            <!-- Command 2 -->
             <div>
-              <div style="color: #8892a4;">
+              <div style="color: #c6ae90;">
                 <span class="text-green-400">$</span>
-                <span class="text-white"> buddio-cli</span>
-                <span style="color: #e94560;"> list</span>
-                <span class="text-yellow-300"> --category</span>
-                <span class="text-cyan-300">"DevOps"</span>
-                <span class="text-yellow-300"> --json</span>
+                <span class="text-amber-100"> /deploy staging, v1.24.0</span>
               </div>
-              <div class="mt-1" style="color: #8892a4;">
-                <span class="text-white">[</span>
-              </div>
-              <div class="pl-4" style="color: #8892a4;">
-                <span class="text-white"
-                  >&#123; &quot;title&quot;: &quot;<span class="text-cyan-300"
-                    >Deploy Staging</span
-                  >&quot;, &quot;category&quot;: &quot;<span class="text-cyan-300"
-                    >DevOps</span
-                  >&quot; &#125;</span
-                >
-              </div>
-              <div style="color: #8892a4;">
-                <span class="text-white">]</span>
+              <div class="mt-1 text-green-300/80">
+                &#10003; Script executed and output returned in launcher
               </div>
             </div>
-
-            <!-- Command 3 -->
             <div>
-              <div style="color: #8892a4;">
+              <div style="color: #c6ae90;">
                 <span class="text-green-400">$</span>
-                <span class="text-white"> buddio-cli</span>
-                <span style="color: #e94560;"> import</span>
-                <span class="text-cyan-300"> team-items.json</span>
+                <span class="text-amber-100"> /summarize-pr</span>
               </div>
-              <div class="mt-1 text-green-400/80">
-                &#10003; Imported 24 items
+              <div class="mt-1 text-cyan-200/80">
+                Not found &rarr; Buddio asks your agent to create it
               </div>
             </div>
           </div>
         </TerminalBlock>
       </div>
 
-      <!-- Text content (theme-aware) -->
-      <div
-        class="order-1 lg:order-2 animate-slide-up"
-        style="animation-delay: 0.1s; opacity: 0;"
-      >
+      <div class="order-1 animate-slide-up lg:order-2" style="animation-delay: 0.1s; opacity: 0;">
         <div
-          class="mb-4 inline-flex items-center gap-2 rounded-full border border-launcher-accent/20 bg-launcher-accent/10 px-3 py-1 text-sm text-launcher-accent"
+          class="mb-4 inline-flex items-center gap-2 rounded-full border border-launcher-accent/25 bg-launcher-accent/10 px-3 py-1 text-sm text-launcher-accent"
         >
-          <svg
-            xmlns="http://www.w3.org/2000/svg"
-            viewBox="0 0 20 20"
-            fill="currentColor"
-            class="h-4 w-4"
-          >
-            <path
-              fill-rule="evenodd"
-              d="M3.25 3A2.25 2.25 0 0 0 1 5.25v9.5A2.25 2.25 0 0 0 3.25 17h13.5A2.25 2.25 0 0 0 19 14.75v-9.5A2.25 2.25 0 0 0 16.75 3H3.25Zm.943 8.752a.75.75 0 0 1 .055-1.06L6.128 9l-1.88-1.693a.75.75 0 1 1 1.004-1.114l2.5 2.25a.75.75 0 0 1 0 1.114l-2.5 2.25a.75.75 0 0 1-1.06-.055ZM9.75 10.25a.75.75 0 0 0 0 1.5h2.5a.75.75 0 0 0 0-1.5h-2.5Z"
-              clip-rule="evenodd"></path>
-          </svg>
-          CLI
+          Slash Commands
         </div>
 
         <h2 class="section-heading mb-6">
-          Manage with <span class="gradient-text">code</span>
+          Fast actions with
+          <span class="gradient-text">"/"</span>
         </h2>
 
         <p class="mb-6 text-lg text-launcher-muted">
-          The <code class="code-inline">buddio-cli</code> gives you full control from the terminal. Add items, export to JSON,
-          and import shared configurations.
+          Buddio&apos;s slash command mode gives you a fast path from intent to script execution,
+          with discoverable commands and parameter hints built into the launcher.
         </p>
 
         <div class="space-y-3">
-          {["Add, remove, and search items from the terminal", "JSON import/export for team sharing", "Perfect for CI/CD and automation scripts", "Shares the same SQLite database as the app"].map((text) => (
+          {[
+            "Type '/' to browse or filter available commands in real time",
+            "Use Enter to open parameter mode with live parameter hints",
+            "Run scripts directly and capture command output in the launcher",
+            "If no command exists, Buddio can ask your AI agent to create one",
+          ].map((text) => (
             <div class="flex items-center gap-3 text-launcher-muted">
               <div class="h-1.5 w-1.5 rounded-full bg-launcher-accent" />
               <span>{text}</span>
