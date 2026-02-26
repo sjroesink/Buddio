@@ -1,6 +1,6 @@
 ---
 const year = new Date().getFullYear();
-const logoSrc = `${import.meta.env.BASE_URL}buddio-wordmark.svg`;
+const logoSrc = `${import.meta.env.BASE_URL.replace(/\/$/, "")}/buddio-wordmark.svg`;
 ---
 
 <footer class="border-t py-8" style="border-color: var(--glass-border);">

@@ -7,7 +7,7 @@ const links = [
   { href: "#cli", label: "CLI" },
   { href: "#download", label: "Download" },
 ];
-const logoSrc = `${import.meta.env.BASE_URL}buddio-wordmark.svg`;
+const logoSrc = `${import.meta.env.BASE_URL.replace(/\/$/, "")}/buddio-wordmark.svg`;
 ---
 
 <nav

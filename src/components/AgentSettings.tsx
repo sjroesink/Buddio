@@ -9,6 +9,57 @@ import type {
 
 type SettingsTab = "general" | "agent";
 
+const MODIFIER_KEY_VALUES = new Set(["Control", "Alt", "Shift", "Meta"]);
+const MODIFIER_KEY_CODES = new Set([
+  "ControlLeft",
+  "ControlRight",
+  "AltLeft",
+  "AltRight",
+  "ShiftLeft",
+  "ShiftRight",
+  "MetaLeft",
+  "MetaRight",
+]);
+
+function normalizeShortcutKey(e: KeyboardEvent): string | null {
+  if (MODIFIER_KEY_VALUES.has(e.key) || MODIFIER_KEY_CODES.has(e.code)) {
+    return null;
+  }
+
+  // Prefer physical key codes so shifted characters like "*" map to Digit8.
+  if (e.code && e.code !== "Unidentified") {
+    return e.code;
+  }
+
+  // Fallback for unusual browsers/platforms that don't provide a usable code.
+  if (e.key === " ") return "Space";
+  if (e.key.length === 1) return e.key.toUpperCase();
+  return e.key;
+}
+
+function formatShortcutKeyLabel(key: string): string {
+  if (/^Key[A-Z]$/.test(key)) return key.slice(3);
+  if (/^Digit[0-9]$/.test(key)) return key.slice(5);
+  if (/^Numpad[0-9]$/.test(key)) return `Num ${key.slice(6)}`;
+
+  switch (key) {
+    case "NumpadMultiply":
+      return "Num *";
+    case "NumpadAdd":
+      return "Num +";
+    case "NumpadSubtract":
+      return "Num -";
+    case "NumpadDivide":
+      return "Num /";
+    case "NumpadDecimal":
+      return "Num .";
+    case "NumpadEnter":
+      return "Num Enter";
+    default:
+      return key;
+  }
+}
+
 const NAV_ITEMS: { id: SettingsTab; label: string; icon: string }[] = [
   { id: "general", label: "General", icon: "M10.325 4.317c.426-1.756 2.924-1.756 3.35 0a1.724 1.724 0 002.573 1.066c1.543-.94 3.31.826 2.37 2.37a1.724 1.724 0 001.066 2.573c1.756.426 1.756 2.924 0 3.35a1.724 1.724 0 00-1.066 2.573c.94 1.543-.826 3.31-2.37 2.37a1.724 1.724 0 00-2.573 1.066c-.426 1.756-2.924 1.756-3.35 0a1.724 1.724 0 00-2.573-1.066c-1.543.94-3.31-.826-2.37-2.37a1.724 1.724 0 00-1.066-2.573c-1.756-.426-1.756-2.924 0-3.35a1.724 1.724 0 001.066-2.573c-.94-1.543.826-3.31 2.37-2.37.996.608 2.296.07 2.572-1.065zM15 12a3 3 0 11-6 0 3 3 0 016 0z" },
   { id: "agent", label: "Agent", icon: "M9.75 3.104v5.714a2.25 2.25 0 01-.659 1.591L5 14.5M9.75 3.104c-.251.023-.501.05-.75.082m.75-.082a24.301 24.301 0 014.5 0m0 0v5.714a2.25 2.25 0 00.659 1.591L19 14.5M14.25 3.104c.251.023.501.05.75.082M19 14.5l-2.47 2.47a2.25 2.25 0 01-1.59.659H9.06a2.25 2.25 0 01-1.591-.659L5 14.5m14 0V5.846a2.25 2.25 0 00-1.36-2.066A48.07 48.07 0 0012 3c-1.77 0-3.513.12-5.218.345A2.25 2.25 0 005.64 5.394V14.5" },
@@ -108,25 +159,14 @@ export function AgentSettings({
   }, [onClose, isRecording]);
 
   function buildShortcutString(e: KeyboardEvent): string | null {
-    // Ignore standalone modifier presses
-    if (["Control", "Alt", "Shift", "Meta"].includes(e.key)) return null;
+    const keyName = normalizeShortcutKey(e);
+    if (!keyName) return null;
 
     const parts: string[] = [];
     if (e.ctrlKey) parts.push("Ctrl");
     if (e.altKey) parts.push("Alt");
     if (e.shiftKey) parts.push("Shift");
     if (e.metaKey) parts.push("Meta");
-
-    // Map event.key to our key name format
-    let keyName: string;
-    if (e.key === " ") {
-      keyName = "Space";
-    } else if (e.key.length === 1) {
-      keyName = e.key.toUpperCase();
-    } else {
-      // Keys like "Enter", "Tab", "F1", "ArrowUp", etc.
-      keyName = e.key;
-    }
 
     parts.push(keyName);
     return parts.join("+");
@@ -145,10 +185,9 @@ export function AgentSettings({
       if (e.altKey) preview.push("Alt");
       if (e.shiftKey) preview.push("Shift");
       if (e.metaKey) preview.push("Meta");
-      if (!["Control", "Alt", "Shift", "Meta"].includes(e.key)) {
-        if (e.key === " ") preview.push("Space");
-        else if (e.key.length === 1) preview.push(e.key.toUpperCase());
-        else preview.push(e.key);
+      const previewKey = normalizeShortcutKey(e);
+      if (previewKey) {
+        preview.push(previewKey);
       }
       setRecordingKeys(preview.join("+"));
 
@@ -296,7 +335,7 @@ export function AgentSettings({
   function renderKeyBadges(shortcut: string) {
     return shortcut.split("+").map((key, i) => (
       <kbd key={i} className="kbd">
-        {key}
+        {formatShortcutKeyLabel(key)}
       </kbd>
     ));
   }

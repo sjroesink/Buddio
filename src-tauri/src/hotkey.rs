@@ -1,4 +1,5 @@
 use golaunch_core::Database;
+use std::str::FromStr;
 use tauri::{Emitter, Manager};
 use tauri_plugin_global_shortcut::{Code, GlobalShortcutExt, Modifiers, Shortcut, ShortcutState};
 
@@ -75,6 +76,11 @@ fn parse_shortcut(s: &str) -> Result<Shortcut, String> {
 }
 
 fn str_to_code(s: &str) -> Result<Code, String> {
+    // Accept canonical UI Events code strings (e.g. "KeyK", "Digit8", "NumpadMultiply")
+    if let Ok(code) = Code::from_str(s) {
+        return Ok(code);
+    }
+
     // Try single letter / digit first
     if s.len() == 1 {
         let ch = s.chars().next().unwrap().to_ascii_uppercase();
@@ -150,18 +156,64 @@ fn str_to_code(s: &str) -> Result<Code, String> {
         "f10" => Ok(Code::F10),
         "f11" => Ok(Code::F11),
         "f12" => Ok(Code::F12),
+        // Shifted US symbols mapped to their physical base keys.
+        "!" => Ok(Code::Digit1),
+        "@" => Ok(Code::Digit2),
+        "#" => Ok(Code::Digit3),
+        "$" => Ok(Code::Digit4),
+        "%" => Ok(Code::Digit5),
+        "^" => Ok(Code::Digit6),
+        "&" => Ok(Code::Digit7),
+        "*" => Ok(Code::Digit8),
+        "(" => Ok(Code::Digit9),
+        ")" => Ok(Code::Digit0),
         "minus" | "-" => Ok(Code::Minus),
+        "_" => Ok(Code::Minus),
         "equal" | "=" => Ok(Code::Equal),
+        "+" => Ok(Code::Equal),
         "bracketleft" | "[" => Ok(Code::BracketLeft),
+        "{" => Ok(Code::BracketLeft),
         "bracketright" | "]" => Ok(Code::BracketRight),
+        "}" => Ok(Code::BracketRight),
         "backslash" | "\\" => Ok(Code::Backslash),
+        "|" => Ok(Code::Backslash),
         "semicolon" | ";" => Ok(Code::Semicolon),
+        ":" => Ok(Code::Semicolon),
         "quote" | "'" => Ok(Code::Quote),
+        "\"" => Ok(Code::Quote),
         "backquote" | "`" => Ok(Code::Backquote),
         "comma" | "," => Ok(Code::Comma),
+        "<" => Ok(Code::Comma),
         "period" | "." => Ok(Code::Period),
+        ">" => Ok(Code::Period),
         "slash" | "/" => Ok(Code::Slash),
+        "?" => Ok(Code::Slash),
         _ => Err(format!("Unknown key: {}", s)),
+    }
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+
+    #[test]
+    fn parses_uievents_code_names() {
+        assert_eq!(str_to_code("KeyK").unwrap(), Code::KeyK);
+        assert_eq!(str_to_code("Digit8").unwrap(), Code::Digit8);
+        assert_eq!(str_to_code("NumpadMultiply").unwrap(), Code::NumpadMultiply);
+    }
+
+    #[test]
+    fn parses_shifted_symbol_aliases() {
+        assert_eq!(str_to_code("*").unwrap(), Code::Digit8);
+        assert_eq!(str_to_code("?").unwrap(), Code::Slash);
+        assert_eq!(str_to_code(")").unwrap(), Code::Digit0);
+    }
+
+    #[test]
+    fn parses_shortcuts_with_code_keys() {
+        assert!(parse_shortcut("Ctrl+Shift+Digit8").is_ok());
+        assert!(parse_shortcut("Ctrl+NumpadMultiply").is_ok());
     }
 }
 
