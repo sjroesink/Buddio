@@ -432,7 +432,8 @@ body,
   border: 1px solid rgba(255, 255, 255, 0.1);
   border-radius: 12px;
   width: min(94vw, 640px);
-  max-height: min(90vh, 440px);
+  height: min(90vh, 560px);
+  max-height: min(90vh, 560px);
   display: flex;
   flex-direction: column;
   overflow: hidden;

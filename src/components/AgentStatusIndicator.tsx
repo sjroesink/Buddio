@@ -1,4 +1,3 @@
-import { useId } from "react";
 import type { AgentStatus } from "../types";
 
 interface AgentStatusIndicatorProps {
@@ -18,7 +17,6 @@ export function AgentStatusIndicator({
   onClick,
 }: AgentStatusIndicatorProps) {
   const clickable = !!onClick;
-  const gradientId = `dog-grad-${useId().replace(/:/g, "")}`;
 
   return (
     <button
@@ -37,28 +35,89 @@ export function AgentStatusIndicator({
           className="h-5 w-5"
           aria-hidden="true"
         >
-          <defs>
-            <linearGradient id={gradientId} x1="0%" y1="0%" x2="100%" y2="100%">
-              <stop offset="0%" stopColor="#F59E0B" />
-              <stop offset="100%" stopColor="#EF4444" />
-            </linearGradient>
-          </defs>
-          <path d="M 30 55 L 12 18 L 52 38 Z" fill={`url(#${gradientId})`} />
-          <path d="M 98 55 L 116 18 L 76 38 Z" fill={`url(#${gradientId})`} />
-          <path
-            d="M 30 55 C 30 20 98 20 98 55 L 110 85 C 110 115 18 115 18 85 Z"
-            fill={`url(#${gradientId})`}
+          <rect
+            x="14"
+            y="32"
+            width="14"
+            height="30"
+            rx="7"
+            transform="rotate(24 21 47)"
+            fill="#94a3b8"
+            stroke="#475569"
+            strokeWidth="3"
           />
-          <circle cx="48" cy="66" r="9" fill="#FFFFFF" />
-          <circle cx="80" cy="66" r="9" fill="#FFFFFF" />
-          <circle cx="64" cy="88" r="10" fill="#1E293B" />
-          <path
-            d="M 48 104 Q 64 112 80 104"
-            stroke="#FFFFFF"
-            strokeWidth="6"
+          <rect
+            x="100"
+            y="32"
+            width="14"
+            height="30"
+            rx="7"
+            transform="rotate(-24 107 47)"
+            fill="#94a3b8"
+            stroke="#475569"
+            strokeWidth="3"
+          />
+
+          <line
+            x1="64"
+            y1="18"
+            x2="64"
+            y2="8"
+            stroke="#475569"
+            strokeWidth="3"
             strokeLinecap="round"
-            fill="none"
           />
+          <circle cx="64" cy="7" r="4.5" fill="#38bdf8" stroke="#475569" strokeWidth="2.5" />
+
+          <rect
+            x="22"
+            y="20"
+            width="84"
+            height="60"
+            rx="24"
+            fill="#cbd5e1"
+            stroke="#475569"
+            strokeWidth="3"
+          />
+          <rect
+            x="33"
+            y="30"
+            width="62"
+            height="34"
+            rx="12"
+            fill="#0f172a"
+            stroke="#1e293b"
+            strokeWidth="2"
+          />
+
+          <ellipse cx="50" cy="46" rx="6" ry="9" fill="#38bdf8" />
+          <ellipse cx="78" cy="46" rx="6" ry="9" fill="#38bdf8" />
+          <circle cx="49" cy="43" r="2.2" fill="#ffffff" />
+          <circle cx="77" cy="43" r="2.2" fill="#ffffff" />
+          <path
+            d="M57 58 Q64 64 71 58"
+            fill="none"
+            stroke="#38bdf8"
+            strokeWidth="3"
+            strokeLinecap="round"
+          />
+          <circle cx="41" cy="57" r="3" fill="#f43f5e" opacity="0.65" />
+          <circle cx="87" cy="57" r="3" fill="#f43f5e" opacity="0.65" />
+
+          <rect
+            x="34"
+            y="74"
+            width="60"
+            height="38"
+            rx="16"
+            fill="#e2e8f0"
+            stroke="#475569"
+            strokeWidth="3"
+          />
+          <rect x="48" y="87" width="32" height="11" rx="4" fill="#1e293b" />
+          <rect x="51" y="90" width="5" height="5" rx="1.5" fill="#22c55e" />
+          <rect x="59" y="90" width="5" height="5" rx="1.5" fill="#22c55e" />
+          <rect x="67" y="90" width="5" height="5" rx="1.5" fill="#22c55e" />
         </svg>
         <span
           className="absolute -right-0.5 -top-0.5 h-2.5 w-2.5 rounded-full border border-launcher-bg"
