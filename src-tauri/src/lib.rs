@@ -162,12 +162,6 @@ pub fn run() {
                             let _ = main.hide();
                         }
                     }
-                    WindowEvent::Focused(false) => {
-                        let _ = handle_on_close.emit("launcher-reset", ());
-                        if let Some(main) = handle_on_close.get_webview_window("main") {
-                            let _ = main.hide();
-                        }
-                    }
                     _ => {}
                 });
             }

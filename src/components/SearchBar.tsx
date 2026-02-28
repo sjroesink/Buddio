@@ -234,7 +234,7 @@ function SearchBar({
             ? contextInfo?.hasSelection
               ? "Ask about selection... (e.g. rewrite this)"
               : "Message the agent..."
-            : "Search commands, apps, URLs..."
+            : "Ask anything..."
         }
         className="flex-1 bg-transparent text-launcher-text text-lg placeholder-launcher-muted/60 outline-none"
         spellCheck={false}
@@ -266,7 +266,7 @@ function SearchBar({
         data-testid="settings-button"
         onClick={onSettingsClick}
         className="ml-2 p-1 rounded text-launcher-muted hover:text-launcher-text hover:bg-launcher-hover transition-colors"
-        title="Agent Settings (Ctrl+,)"
+        title="General Settings (Ctrl+,)"
       >
         <svg
           className="w-4 h-4"

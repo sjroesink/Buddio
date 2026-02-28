@@ -30,7 +30,10 @@
       "mcp__golaunch__items_remove",
       "mcp__golaunch__items_run",
       "mcp__golaunch__items_add",
-      "mcp__golaunch__items_update"
+      "mcp__golaunch__items_update",
+      "mcp__buddio__items_update",
+      "mcp__buddio__items_run",
+      "mcp__buddio__items_remove"
     ]
   }
 }

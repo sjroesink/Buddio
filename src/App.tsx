@@ -49,10 +49,19 @@ function App() {
     setToast({ message: error, type: "error" });
   }, []);
 
+  const handleAutoFallbackPrompt = useCallback(
+    (query: string) => {
+      // Ensure UI transitions to composer mode immediately while the turn starts.
+      setForceAgentMode(true);
+      agent.prompt(query);
+    },
+    [agent],
+  );
+
   const launcher = useLauncher({
     agentStatus: agent.status,
     agentAutoFallback: autoFallback,
-    onAgentPrompt: agent.prompt,
+    onAgentPrompt: handleAutoFallbackPrompt,
     onSlashCommandCreate: agent.promptSlashCommand,
     onAgentCancel: agent.cancel,
     agentTurnActive: agent.turnActive,
@@ -278,10 +287,17 @@ function App() {
     !showRewriteActions &&
     !contextPanelOpen &&
     (showHistory || agent.conversations.length > 0);
+  const showAgentSession =
+    isAgentInputMode &&
+    !showConversationHistory &&
+    !showRewriteActions &&
+    !contextPanelOpen &&
+    !showHistory;
 
   const hasQuery = launcher.query.trim().length > 0;
   const showResults = hasQuery && launcher.items.length > 0;
   const showOnlySearch =
+    !isAgentInputMode &&
     (!hasQuery || launcher.items.length === 0) &&
     !launcher.isSlashMode &&
     !showAgentThread &&
@@ -290,6 +306,23 @@ function App() {
     !commandOutput &&
     !contextPanelOpen;
   const windowAnchor = isAgentInputMode ? "bottom" : "top";
+  const isAgentInputModeRef = useRef(isAgentInputMode);
+
+  useEffect(() => {
+    isAgentInputModeRef.current = isAgentInputMode;
+  }, [isAgentInputMode]);
+
+  // Hide launcher on blur only in search mode (not in agent mode)
+  useEffect(() => {
+    const unlisten = listen("tauri://blur", () => {
+      if (!isAgentInputModeRef.current) {
+        invoke("hide_window").catch(() => {});
+      }
+    });
+    return () => {
+      unlisten.then((fn) => fn());
+    };
+  }, []);
 
   useEffect(() => {
     invoke("set_window_compact", {
@@ -439,7 +472,7 @@ function App() {
               onDelete={agent.deleteConversation}
               onNewConversation={handleNewConversation}
             />
-          ) : showAgentThread ? (
+          ) : showAgentSession ? (
             <AgentResponse
               thread={agent.thread}
               thoughts={agent.thoughts}

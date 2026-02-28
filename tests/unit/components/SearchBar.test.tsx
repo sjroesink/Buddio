@@ -21,7 +21,7 @@ describe("SearchBar", () => {
     render(<SearchBar {...defaultProps} mode="search" />);
     expect(screen.getByTestId("search-input")).toHaveAttribute(
       "placeholder",
-      "Search commands, apps, URLs...",
+      "Ask anything...",
     );
   });
 

@@ -171,6 +171,102 @@ function ExecuteSlashCommandAction({
   );
 }
 
+function DogAvatar() {
+  return (
+    <svg
+      xmlns="http://www.w3.org/2000/svg"
+      viewBox="0 0 250 250"
+      className="robot-container"
+      aria-hidden="true"
+    >
+      <g className="tail">
+        <path
+          d="M 160 140 Q 195 125 185 85"
+          fill="none"
+          stroke="#64748b"
+          strokeWidth="6"
+          strokeLinecap="round"
+        />
+        <circle cx="185" cy="85" r="8" fill="#fcd34d" stroke="#64748b" strokeWidth="4" />
+      </g>
+
+      <rect
+        x="42"
+        y="65"
+        width="26"
+        height="60"
+        rx="13"
+        transform="rotate(25 55 95)"
+        fill="#94a3b8"
+        stroke="#475569"
+        strokeWidth="4"
+      />
+      <rect
+        x="182"
+        y="65"
+        width="26"
+        height="60"
+        rx="13"
+        transform="rotate(-25 195 95)"
+        fill="#94a3b8"
+        stroke="#475569"
+        strokeWidth="4"
+      />
+
+      <circle cx="75" cy="165" r="22" fill="#94a3b8" stroke="#475569" strokeWidth="4" />
+      <rect x="45" y="175" width="36" height="16" rx="8" fill="#64748b" stroke="#475569" strokeWidth="4" />
+      <circle cx="175" cy="165" r="22" fill="#94a3b8" stroke="#475569" strokeWidth="4" />
+      <rect x="169" y="175" width="36" height="16" rx="8" fill="#64748b" stroke="#475569" strokeWidth="4" />
+
+      <rect x="85" y="110" width="80" height="70" rx="30" fill="#e2e8f0" stroke="#475569" strokeWidth="4" />
+
+      <rect x="105" y="145" width="40" height="16" rx="6" fill="#1e293b" />
+      <rect x="110" y="149" width="8" height="8" rx="2" fill="#22c55e" className="battery-light" />
+      <rect x="121" y="149" width="8" height="8" rx="2" fill="#22c55e" className="battery-light" />
+      <rect x="132" y="149" width="8" height="8" rx="2" fill="#22c55e" className="battery-light" />
+
+      <rect x="95" y="125" width="22" height="65" rx="11" fill="#cbd5e1" stroke="#475569" strokeWidth="4" />
+      <rect x="133" y="125" width="22" height="65" rx="11" fill="#cbd5e1" stroke="#475569" strokeWidth="4" />
+
+      <line x1="99" y1="180" x2="113" y2="180" stroke="#475569" strokeWidth="3" strokeLinecap="round" />
+      <line x1="137" y1="180" x2="151" y2="180" stroke="#475569" strokeWidth="3" strokeLinecap="round" />
+
+      <rect x="90" y="112" width="70" height="14" rx="7" fill="#ef4444" stroke="#475569" strokeWidth="4" />
+      <circle cx="125" cy="133" r="10" fill="#fbbf24" stroke="#475569" strokeWidth="4" />
+      <circle cx="125" cy="133" r="3" fill="#f59e0b" />
+
+      <line x1="125" y1="45" x2="125" y2="15" stroke="#475569" strokeWidth="4" strokeLinecap="round" />
+      <circle cx="125" cy="15" r="7" fill="#38bdf8" stroke="#475569" strokeWidth="4" />
+      <circle cx="125" cy="15" r="12" fill="#38bdf8" opacity="0.3" className="battery-light" />
+
+      <rect x="65" y="45" width="120" height="85" rx="35" fill="#cbd5e1" stroke="#475569" strokeWidth="4" />
+
+      <rect x="80" y="55" width="90" height="58" rx="20" fill="#0f172a" stroke="#1e293b" strokeWidth="2" />
+
+      <g className="eyes">
+        <ellipse cx="103" cy="78" rx="8" ry="13" fill="#38bdf8" />
+        <circle cx="101" cy="73" r="3" fill="#ffffff" />
+        <ellipse cx="147" cy="78" rx="8" ry="13" fill="#38bdf8" />
+        <circle cx="145" cy="73" r="3" fill="#ffffff" />
+      </g>
+
+      <circle cx="92" cy="95" r="6" fill="#f43f5e" opacity="0.7" />
+      <circle cx="158" cy="95" r="6" fill="#f43f5e" opacity="0.7" />
+
+      <path d="M 116 92 Q 125 102 134 92" fill="none" stroke="#38bdf8" strokeWidth="4" strokeLinecap="round" />
+
+      <path
+        d="M 85 55 Q 125 50 165 55"
+        fill="none"
+        stroke="#ffffff"
+        strokeWidth="4"
+        strokeLinecap="round"
+        opacity="0.5"
+      />
+    </svg>
+  );
+}
+
 interface AgentResponseProps {
   thread: AgentThreadMessage[];
   thoughts: string;
@@ -230,6 +326,9 @@ export function AgentResponse({
   const createdCommandName = createdCommandEntry
     ? extractCommandName(createdCommandEntry.toolContent ?? createdCommandEntry.commandPreview)
     : null;
+  const hasVisibleEntries = thread.some(
+    (entry) => entry.role === "tool" || entry.content.length > 0,
+  );
 
   return (
     <div data-testid="agent-response" className="flex flex-col flex-1 min-h-0">
@@ -283,6 +382,17 @@ export function AgentResponse({
       )}
 
       <div data-testid="agent-thread" className="agent-response" ref={scrollRef}>
+        {!hasVisibleEntries && !isThinking && !turnActive && !permissionRequest && (
+          <div
+            data-testid="agent-empty-state"
+            className="flex h-full min-h-[160px] flex-col items-center justify-center px-4 text-center text-launcher-muted/60"
+          >
+            <span className="text-sm text-launcher-text/75">New session</span>
+            <span className="mt-1 text-xs">
+              Start typing below, or open History to continue a previous chat.
+            </span>
+          </div>
+        )}
         {thread.map((entry, index) => {
           // Skip empty assistant messages
           if (entry.role === "assistant" && entry.content.length === 0) {
@@ -353,6 +463,11 @@ export function AgentResponse({
             !createdCommandName &&
             hasSelection &&
             onReplaceSelection;
+          const bubbleClassName = `rounded-lg px-3 py-2 text-sm leading-relaxed ${
+            entry.role === "user"
+              ? "max-w-[85%] bg-launcher-accent/25 border border-launcher-accent/35 text-launcher-text"
+              : "max-w-[82%] bg-launcher-surface/55 border border-launcher-border/40 text-launcher-text/90"
+          }`;
 
           return (
             <div key={entry.id}>
@@ -361,23 +476,24 @@ export function AgentResponse({
                   entry.role === "user" ? "justify-end" : "justify-start"
                 }`}
               >
-                <div
-                  className={`max-w-[85%] rounded-lg px-3 py-2 text-sm leading-relaxed ${
-                    entry.role === "user"
-                      ? "bg-launcher-accent/25 border border-launcher-accent/35 text-launcher-text"
-                      : "bg-launcher-surface/55 border border-launcher-border/40 text-launcher-text/90"
-                  }`}
-                >
-                  {entry.role === "assistant" ? (
-                    <div className="agent-markdown">
-                      <ReactMarkdown remarkPlugins={[remarkGfm]}>
-                        {entry.content}
-                      </ReactMarkdown>
+                {entry.role === "assistant" ? (
+                  <div className="agent-assistant-row">
+                    <span className="agent-dog-avatar">
+                      <DogAvatar />
+                    </span>
+                    <div className={bubbleClassName}>
+                      <div className="agent-markdown">
+                        <ReactMarkdown remarkPlugins={[remarkGfm]}>
+                          {entry.content}
+                        </ReactMarkdown>
+                      </div>
                     </div>
-                  ) : (
+                  </div>
+                ) : (
+                  <div className={bubbleClassName}>
                     <div className="whitespace-pre-wrap">{entry.content}</div>
-                  )}
-                </div>
+                  </div>
+                )}
               </div>
               {showExecute && (
                 <ExecuteSlashCommandAction

@@ -1,3 +1,4 @@
+import { useId } from "react";
 import type { AgentStatus } from "../types";
 
 interface AgentStatusIndicatorProps {
@@ -12,43 +13,58 @@ const STATUS_COLORS: Record<AgentStatus, string> = {
   error: "#f87171",
 };
 
-export function AgentStatusIndicator({ status, onClick }: AgentStatusIndicatorProps) {
-  if (status === "disconnected") return null;
-
-  const clickable = onClick && status === "connected";
+export function AgentStatusIndicator({
+  status,
+  onClick,
+}: AgentStatusIndicatorProps) {
+  const clickable = !!onClick;
+  const gradientId = `dog-grad-${useId().replace(/:/g, "")}`;
 
   return (
     <button
-      className={`ml-2 p-1 rounded transition-colors ${
-        clickable
-          ? "hover:bg-launcher-hover cursor-pointer"
-          : "cursor-default"
+      className={`ml-2 rounded p-1 transition-colors ${
+        clickable ? "cursor-pointer hover:bg-launcher-hover" : "cursor-default"
       }`}
-      title={status === "connected" ? "Enter agent mode" : `Agent: ${status}`}
+      title={clickable ? "Enter agent mode" : `Agent: ${status}`}
       onClick={clickable ? onClick : undefined}
       tabIndex={clickable ? 0 : -1}
       type="button"
     >
-      <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 100 100" width="16" height="16">
-        <defs>
-          <linearGradient id="screenGrad" x1="0%" y1="0%" x2="100%" y2="100%">
-            <stop offset="0%" stopColor="#0f172a"/>
-            <stop offset="100%" stopColor="#1e293b"/>
-          </linearGradient>
-        </defs>
-
-        <line x1="50" y1="20" x2="50" y2="8" stroke="#64748b" strokeWidth="4" strokeLinecap="round"/>
-        <circle cx="50" cy="6" r="4" fill={STATUS_COLORS[status]} />
-
-        <rect x="15" y="22" width="70" height="56" rx="10" fill="#cbd5e1" stroke="#475569" strokeWidth="3" />
-
-        <rect x="22" y="29" width="56" height="40" rx="4" fill="url(#screenGrad)" />
-
-        <text x="50" y="56" fontFamily="monospace" fontSize="22" fill="#38bdf8" fontWeight="bold" textAnchor="middle">&lt;/&gt;</text>
-
-        <path d="M40 78 L60 78 L65 90 L35 90 Z" fill="#64748b" />
-        <line x1="30" y1="92" x2="70" y2="92" stroke="#475569" strokeWidth="4" strokeLinecap="round"/>
-      </svg>
+      <span className="relative block h-5 w-5">
+        <svg
+          xmlns="http://www.w3.org/2000/svg"
+          viewBox="0 0 128 128"
+          className="h-5 w-5"
+          aria-hidden="true"
+        >
+          <defs>
+            <linearGradient id={gradientId} x1="0%" y1="0%" x2="100%" y2="100%">
+              <stop offset="0%" stopColor="#F59E0B" />
+              <stop offset="100%" stopColor="#EF4444" />
+            </linearGradient>
+          </defs>
+          <path d="M 30 55 L 12 18 L 52 38 Z" fill={`url(#${gradientId})`} />
+          <path d="M 98 55 L 116 18 L 76 38 Z" fill={`url(#${gradientId})`} />
+          <path
+            d="M 30 55 C 30 20 98 20 98 55 L 110 85 C 110 115 18 115 18 85 Z"
+            fill={`url(#${gradientId})`}
+          />
+          <circle cx="48" cy="66" r="9" fill="#FFFFFF" />
+          <circle cx="80" cy="66" r="9" fill="#FFFFFF" />
+          <circle cx="64" cy="88" r="10" fill="#1E293B" />
+          <path
+            d="M 48 104 Q 64 112 80 104"
+            stroke="#FFFFFF"
+            strokeWidth="6"
+            strokeLinecap="round"
+            fill="none"
+          />
+        </svg>
+        <span
+          className="absolute -right-0.5 -top-0.5 h-2.5 w-2.5 rounded-full border border-launcher-bg"
+          style={{ backgroundColor: STATUS_COLORS[status] }}
+        />
+      </span>
     </button>
   );
 }
