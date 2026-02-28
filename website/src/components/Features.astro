@@ -1,89 +1,109 @@
 ---
-import FeatureCard from "./FeatureCard.astro";
+const base = import.meta.env.BASE_URL.replace(/\/$/, "");
 
-const features = [
+const useCases = [
   {
-    icon: "&#9000;",
-    title: "Keyboard-Only Flow",
+    title: "Morning standup in 20 seconds",
     description:
-      "Search, preview, filter by category, and execute actions without touching your mouse.",
+      "Type /summarize on yesterday's notes and paste a clean update directly into chat.",
+    caption: "Turn raw notes into a polished standup post before your first meeting.",
+    screenshot: `${base}/screenshots/standup-summary.svg`,
   },
   {
-    icon: "&#127919;",
-    title: "Slash Command Mode",
+    title: "Jump to the right ticket instantly",
     description:
-      "Type '/' to list commands, search by name, enter parameters, and run scripts directly.",
+      "Search by partial issue name, hit Enter, and open the exact task without leaving flow.",
+    caption: "Use one keyboard sequence to find and open active work items.",
+    screenshot: `${base}/screenshots/ticket-jump.svg`,
   },
   {
-    icon: "&#129302;",
-    title: "AI-Created Commands",
+    title: "Rewrite messy messages quickly",
     description:
-      "No command yet? Press Enter and Buddio can ask your connected agent to create one for you.",
+      "Select text, run rewrite, and get a clearer version that is ready to send in one pass.",
+    caption: "Clean communication without context switching to another tool.",
+    screenshot: `${base}/screenshots/rewrite-message.svg`,
   },
   {
-    icon: "&#128272;",
-    title: "Permission Guardrails",
+    title: "Run repetitive dev commands safely",
     description:
-      "Agent tool calls are shown in-line with explicit allow/deny choices, so you stay in control.",
+      "Launch your release or deploy scripts with saved parameters and visible command context.",
+    caption: "Standardize recurring workflows so they stay fast and predictable.",
+    screenshot: `${base}/screenshots/deploy-check.svg`,
   },
   {
-    icon: "&#128203;",
-    title: "Rich Context Capture",
+    title: "Recover useful prompts from history",
     description:
-      "Buddio can include selected text, clipboard text, source app, and pasted images in agent prompts.",
-  },
-  {
-    icon: "&#128161;",
-    title: "Smart Suggestions",
-    description:
-      "When no item matches, Buddio suggests commands from history and lets you save them instantly.",
-  },
-  {
-    icon: "&#128172;",
-    title: "Conversation + Rewrite Memory",
-    description:
-      "Resume conversation history and quickly reuse recent rewrite prompts from selection workflows.",
-  },
-  {
-    icon: "&#9889;",
-    title: "Configurable Hotkey + Tray",
-    description:
-      "Set your preferred shortcut and open Buddio from the tray menu in one click.",
-  },
-  {
-    icon: "&#62;&#95;",
-    title: "Optional CLI",
-    description:
-      "Terminal users can still import/export or automate via buddio-cli, but the app works great without it.",
+      "Reopen a previous helper conversation and reuse prompts for the same type of task.",
+    caption: "Keep momentum by reusing what already worked for you last time.",
+    screenshot: `${base}/screenshots/history-reuse.svg`,
   },
 ];
 ---
 
-<section id="features" class="relative py-32">
-  <div class="mx-auto max-w-6xl px-6">
-    <!-- Section header -->
-    <div class="mb-16 text-center">
-      <h2 class="section-heading mb-4">
-        What Buddio can do
-        <span class="gradient-text">right now</span>
-      </h2>
-      <p class="section-subheading mx-auto">
-        Current launcher features, including slash commands and agent workflows.
-      </p>
-    </div>
-
-    <!-- Feature grid -->
-    <div class="grid gap-6 md:grid-cols-2 lg:grid-cols-3">
+<section id="features" class="relative pb-28 pt-10 sm:pb-32">
+  <div class="mx-auto grid max-w-6xl gap-10 px-6 lg:grid-cols-[1.05fr_0.95fr] lg:items-start">
+    <div class="space-y-4">
       {
-        features.map((feature, i) => (
-          <FeatureCard
-            icon={feature.icon}
-            title={feature.title}
-            description={feature.description}
-            delay={`${i * 0.1}s`}
-          />
+        useCases.map((item, index) => (
+          <button
+            type="button"
+            class={`use-case-trigger ${index === 0 ? "is-active" : ""}`}
+            data-preview={item.screenshot}
+            data-title={item.title}
+            data-caption={item.caption}
+            aria-label={`Preview example: ${item.title}`}
+          >
+            <span class="use-case-title">{item.title}</span>
+            <span class="use-case-description">{item.description}</span>
+          </button>
         ))
       }
     </div>
+
+    <div class="glass-card feature-preview rounded-3xl p-4 sm:p-5">
+      <img
+        id="feature-preview-image"
+        src={useCases[0].screenshot}
+        alt={useCases[0].title}
+        class="feature-preview-image"
+        loading="lazy"
+        decoding="async"
+      />
+      <p id="feature-preview-title" class="feature-preview-title">{useCases[0].title}</p>
+      <p id="feature-preview-caption" class="feature-preview-caption">{useCases[0].caption}</p>
+    </div>
   </div>
 </section>
+
+<script is:inline>
+  const triggers = Array.from(document.querySelectorAll(".use-case-trigger"));
+  const previewImage = document.getElementById("feature-preview-image");
+  const previewTitle = document.getElementById("feature-preview-title");
+  const previewCaption = document.getElementById("feature-preview-caption");
+
+  function activate(trigger) {
+    const src = trigger.getAttribute("data-preview");
+    const title = trigger.getAttribute("data-title");
+    const caption = trigger.getAttribute("data-caption");
+
+    if (!src || !title || !caption) return;
+
+    if (previewImage) {
+      previewImage.setAttribute("src", src);
+      previewImage.setAttribute("alt", title);
+    }
+
+    if (previewTitle) previewTitle.textContent = title;
+    if (previewCaption) previewCaption.textContent = caption;
+
+    triggers.forEach((button) => {
+      button.classList.toggle("is-active", button === trigger);
+    });
+  }
+
+  triggers.forEach((trigger) => {
+    trigger.addEventListener("mouseenter", () => activate(trigger));
+    trigger.addEventListener("focus", () => activate(trigger));
+    trigger.addEventListener("click", () => activate(trigger));
+  });
+</script>

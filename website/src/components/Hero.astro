@@ -1,115 +1,36 @@
 ---
-const logoSrc = `${import.meta.env.BASE_URL.replace(/\/$/, "")}/buddio-wordmark.svg`;
+const basePath = import.meta.env.BASE_URL.replace(/\/$/, "");
+const logoDarkSrc = `${basePath}/buddio-wordmark.svg`;
+const logoLightSrc = `${basePath}/buddio-wordmark-light.svg`;
 ---
 
-<section class="relative flex min-h-screen items-center justify-center overflow-hidden pt-24">
+<section class="relative overflow-hidden pb-20 pt-32 sm:pt-36">
   <div class="pointer-events-none absolute inset-0">
-    <div class="hero-blob left-[12%] top-[12%] h-80 w-80 bg-orange-400/20 animate-pulse-glow"></div>
+    <div class="hero-blob left-[10%] top-[12%] h-72 w-72 bg-orange-400/10 animate-pulse-glow"></div>
     <div
-      class="hero-blob right-[10%] top-[18%] h-72 w-72 bg-sky-400/20 animate-pulse-glow"
+      class="hero-blob right-[10%] top-[18%] h-72 w-72 bg-sky-400/10 animate-pulse-glow"
       style="animation-delay: 1.5s;"
     ></div>
     <div
-      class="hero-blob bottom-[8%] left-1/2 h-72 w-72 -translate-x-1/2 bg-amber-500/20 animate-pulse-glow"
+      class="hero-blob bottom-[-12%] left-1/2 h-72 w-72 -translate-x-1/2 bg-amber-500/10 animate-pulse-glow"
       style="animation-delay: 3s;"
     ></div>
   </div>
 
-  <div class="relative z-10 mx-auto max-w-5xl px-6 text-center">
-    <div class="mx-auto mb-8 max-w-3xl animate-fade-in">
-      <div class="rounded-3xl border border-white/20 bg-[#2b1a0f]/88 p-6 shadow-2xl sm:p-8">
-        <img
-          src={logoSrc}
-          alt="Buddio"
-          class="mx-auto w-full max-w-[42rem]"
-          loading="eager"
-          decoding="async"
-        />
-      </div>
-    </div>
-
-    <h1
-      class="section-heading mb-5 !text-4xl !font-extrabold !leading-tight sm:!text-5xl md:!text-6xl animate-slide-up"
-    >
-      Meet your desktop dog helper.
-      <br />
-      <span class="gradient-text">Ask Buddio anything.</span>
-    </h1>
-
-    <p
-      class="mx-auto mb-8 max-w-3xl text-lg text-launcher-muted md:text-xl animate-slide-up"
-      style="animation-delay: 0.08s; opacity: 0;"
-    >
-      Buddio keeps your launcher fast and friendly: instant search, slash commands,
-      AI chat, and context-aware actions from one keyboard workflow.
-    </p>
-
-    <div
-      class="mb-10 flex flex-wrap items-center justify-center gap-2.5 text-sm animate-slide-up"
-      style="animation-delay: 0.14s; opacity: 0;"
-    >
-      <span class="badge rounded-full px-3 py-1.5">/summarize release-notes.md</span>
-      <span class="badge rounded-full px-3 py-1.5">/deploy staging</span>
-      <span class="badge rounded-full px-3 py-1.5">Rewrite selected text</span>
-      <span class="badge rounded-full px-3 py-1.5">Ctrl+S to save suggestions</span>
-    </div>
-
-    <div
-      class="flex flex-col items-center justify-center gap-4 sm:flex-row animate-slide-up"
-      style="animation-delay: 0.2s; opacity: 0;"
-    >
-      <a
-        href="#download"
-        class="inline-flex items-center gap-2 rounded-xl bg-launcher-accent px-8 py-3.5 text-base font-semibold text-white transition-all hover:brightness-110 glow-accent"
-      >
-        <svg
-          xmlns="http://www.w3.org/2000/svg"
-          viewBox="0 0 20 20"
-          fill="currentColor"
-          class="h-5 w-5"
-        >
-          <path
-            d="M10.75 2.75a.75.75 0 0 0-1.5 0v8.614L6.295 8.235a.75.75 0 1 0-1.09 1.03l4.25 4.5a.75.75 0 0 0 1.09 0l4.25-4.5a.75.75 0 0 0-1.09-1.03l-2.955 3.129V2.75Z"
-          ></path>
-          <path
-            d="M3.5 12.75a.75.75 0 0 0-1.5 0v2.5A2.75 2.75 0 0 0 4.75 18h10.5A2.75 2.75 0 0 0 18 15.25v-2.5a.75.75 0 0 0-1.5 0v2.5c0 .69-.56 1.25-1.25 1.25H4.75c-.69 0-1.25-.56-1.25-1.25v-2.5Z"
-          ></path>
-        </svg>
-        Download Buddio
-      </a>
-      <a
-        href="#slash"
-        class="btn-ghost inline-flex items-center gap-2 rounded-xl px-8 py-3.5 text-base font-semibold transition-all"
-      >
-        Explore Slash Commands
-      </a>
-    </div>
-
-    <div
-      class="mx-auto mt-14 max-w-3xl animate-slide-up"
-      style="animation-delay: 0.28s; opacity: 0;"
-    >
-      <div
-        class="overflow-hidden rounded-2xl border border-white/20 p-1 shadow-2xl"
-        style="background: rgba(35, 21, 12, 0.95);"
-      >
-        <div class="flex items-center gap-2 rounded-t-xl px-4 py-3" style="background: #2d1b10;">
-          <div class="flex gap-1.5">
-            <div class="h-3 w-3 rounded-full bg-red-500/60"></div>
-            <div class="h-3 w-3 rounded-full bg-yellow-500/60"></div>
-            <div class="h-3 w-3 rounded-full bg-green-500/60"></div>
-          </div>
-          <div class="ml-2 text-xs text-amber-100/70">Buddio helper chat</div>
-        </div>
-        <div class="space-y-3 p-4 text-left" style="background: #23150c;">
-          <div class="rounded-lg bg-white/5 px-4 py-3 text-sm text-amber-100/90">
-            You: Buddio, clean this commit message and summarize changed files.
-          </div>
-          <div class="rounded-lg border border-amber-500/25 bg-amber-500/10 px-4 py-3 text-sm text-amber-50">
-            Buddio: Done. I also created <code class="rounded bg-black/20 px-1 py-0.5 text-xs">/summarize-pr</code> so you can reuse this flow.
-          </div>
-        </div>
-      </div>
-    </div>
+  <div class="relative z-10 mx-auto max-w-6xl px-6">
+    <img
+      src={logoLightSrc}
+      alt="Buddio"
+      class="mx-auto block w-full max-w-[58rem] animate-fade-in dark:hidden"
+      loading="eager"
+      decoding="async"
+    />
+    <img
+      src={logoDarkSrc}
+      alt="Buddio"
+      class="mx-auto hidden w-full max-w-[58rem] animate-fade-in dark:block"
+      loading="eager"
+      decoding="async"
+    />
   </div>
 </section>

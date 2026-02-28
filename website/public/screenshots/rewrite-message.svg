@@ -1,0 +1,33 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="1200" height="760" viewBox="0 0 1200 760">
+  <defs>
+    <linearGradient id="bg3" x1="0" y1="0" x2="1" y2="1">
+      <stop offset="0%" stop-color="#302015" />
+      <stop offset="100%" stop-color="#1a1317" />
+    </linearGradient>
+  </defs>
+  <rect width="1200" height="760" fill="url(#bg3)" rx="28" />
+  <rect x="42" y="42" width="1116" height="676" rx="20" fill="#1f1511" stroke="#6a4027" />
+  <rect x="42" y="42" width="1116" height="66" rx="20" fill="#352217" />
+  <text x="84" y="84" font-family="JetBrains Mono, monospace" font-size="21" fill="#f9e2c2">Buddio - Rewrite selection</text>
+
+  <rect x="96" y="146" width="488" height="520" rx="14" fill="#2e1f15" />
+  <text x="128" y="200" font-family="Nunito, sans-serif" font-size="30" font-weight="700" fill="#fce6c9">Original</text>
+  <rect x="128" y="232" width="424" height="10" fill="#9b6f4c" rx="5" />
+  <rect x="128" y="260" width="392" height="10" fill="#9b6f4c" rx="5" />
+  <rect x="128" y="288" width="426" height="10" fill="#9b6f4c" rx="5" />
+  <rect x="128" y="316" width="334" height="10" fill="#9b6f4c" rx="5" />
+  <rect x="128" y="386" width="430" height="56" fill="#4b301f" rx="10" />
+  <text x="152" y="421" font-family="Nunito, sans-serif" font-size="24" fill="#ffd7b1">Tone: too blunt</text>
+
+  <rect x="616" y="146" width="488" height="520" rx="14" fill="#2e1f15" />
+  <text x="648" y="200" font-family="Nunito, sans-serif" font-size="30" font-weight="700" fill="#fce6c9">Rewritten</text>
+  <rect x="648" y="232" width="420" height="10" fill="#dfb18a" rx="5" />
+  <rect x="648" y="260" width="410" height="10" fill="#dfb18a" rx="5" />
+  <rect x="648" y="288" width="436" height="10" fill="#dfb18a" rx="5" />
+  <rect x="648" y="316" width="380" height="10" fill="#dfb18a" rx="5" />
+  <rect x="648" y="388" width="210" height="48" rx="11" fill="#ea7b1a" />
+  <text x="705" y="420" font-family="Nunito, sans-serif" font-size="24" font-weight="700" fill="#fffaf4">Copy</text>
+
+  <rect x="880" y="388" width="188" height="48" rx="11" fill="#204577" />
+  <text x="925" y="420" font-family="Nunito, sans-serif" font-size="24" font-weight="700" fill="#f2f8ff">Replace</text>
+</svg>

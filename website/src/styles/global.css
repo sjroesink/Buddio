@@ -47,9 +47,10 @@
   body {
     @apply bg-launcher-bg text-launcher-text antialiased;
     background-image:
-      radial-gradient(circle at 8% 4%, rgba(var(--accent-secondary), 0.2), transparent 34%),
-      radial-gradient(circle at 86% 20%, rgba(var(--accent-glow), 0.23), transparent 36%);
+      radial-gradient(circle at 6% 8%, rgba(var(--accent-secondary), 0.16), transparent 32%),
+      radial-gradient(circle at 92% 18%, rgba(var(--accent-glow), 0.16), transparent 34%);
     background-attachment: fixed;
+    line-height: 1.6;
     transition: background-color 0.3s ease, color 0.3s ease;
   }
 
@@ -87,6 +88,141 @@
   .hero-blob {
     @apply absolute rounded-full blur-3xl;
     animation: float 8s ease-in-out infinite;
+  }
+
+  .download-tabs {
+    @apply overflow-hidden rounded-2xl;
+    border: 1px solid var(--glass-border);
+    background: var(--glass-bg);
+    backdrop-filter: blur(16px);
+    -webkit-backdrop-filter: blur(16px);
+  }
+
+  .download-tab-list {
+    @apply flex items-center gap-1 overflow-x-auto px-2;
+    border-bottom: 1px solid var(--glass-border);
+  }
+
+  .download-tab {
+    @apply inline-flex items-center gap-2.5 border-b-2 px-4 py-3.5 text-lg font-semibold transition-colors sm:px-5;
+    border-bottom-color: transparent;
+    color: var(--color-muted);
+    white-space: nowrap;
+  }
+
+  .download-tab-icon {
+    width: 1.05rem;
+    height: 1.05rem;
+    flex: none;
+    opacity: 0.9;
+  }
+
+  .download-tab:hover {
+    color: var(--heading-color);
+  }
+
+  .download-tab.is-active {
+    color: var(--heading-color);
+    border-bottom-color: rgb(var(--accent-glow));
+    background: var(--badge-bg);
+  }
+
+  .download-panel {
+    @apply p-4 sm:p-5;
+  }
+
+  .download-meta-row {
+    @apply mb-3 flex items-center justify-between gap-3;
+  }
+
+  .download-shell-label {
+    @apply font-mono text-sm uppercase tracking-wide sm:text-base;
+    color: var(--color-muted);
+  }
+
+  .download-os-label {
+    @apply text-sm sm:text-base;
+    color: var(--color-muted);
+  }
+
+  .download-command-row {
+    @apply flex items-center gap-3 rounded-xl p-3.5 sm:gap-4 sm:p-4;
+    background: var(--code-bg);
+    border: 1px solid var(--glass-border);
+  }
+
+  .download-command {
+    @apply block w-full overflow-x-auto whitespace-nowrap py-1 text-base sm:text-lg;
+    color: rgb(var(--accent-glow));
+    font-family: "JetBrains Mono", "SF Mono", "Fira Code", monospace;
+  }
+
+  .copy-btn {
+    @apply rounded-lg px-4 py-2 text-sm font-semibold transition-all sm:shrink-0 sm:text-base;
+    border: 1px solid var(--glass-border);
+    color: var(--heading-color);
+    background: var(--badge-bg);
+    min-width: 4.6rem;
+  }
+
+  .copy-btn:hover {
+    border-color: var(--color-border);
+    background: var(--color-hover);
+  }
+
+  .copy-btn:focus-visible {
+    outline: 2px solid rgba(var(--accent-glow), 0.6);
+    outline-offset: 2px;
+  }
+
+  .use-case-trigger {
+    @apply block w-full rounded-3xl p-6 text-left transition-all sm:p-7;
+    border: 1px solid var(--glass-border);
+    background: var(--glass-bg);
+  }
+
+  .use-case-trigger:hover,
+  .use-case-trigger:focus-visible,
+  .use-case-trigger.is-active {
+    border-color: var(--color-border);
+    background: var(--color-hover);
+  }
+
+  .use-case-trigger:focus-visible {
+    outline: 2px solid rgba(var(--accent-glow), 0.5);
+    outline-offset: 2px;
+  }
+
+  .use-case-title {
+    @apply block font-display text-3xl leading-tight sm:text-4xl;
+    color: var(--heading-color);
+  }
+
+  .use-case-description {
+    @apply mt-3 block text-lg sm:text-xl;
+    color: var(--color-muted);
+  }
+
+  .feature-preview {
+    @apply lg:sticky;
+    top: 6.25rem;
+  }
+
+  .feature-preview-image {
+    @apply w-full rounded-2xl;
+    aspect-ratio: 16 / 10;
+    object-fit: cover;
+    border: 1px solid var(--glass-border);
+  }
+
+  .feature-preview-title {
+    @apply mt-4 font-display text-2xl leading-tight sm:text-3xl;
+    color: var(--heading-color);
+  }
+
+  .feature-preview-caption {
+    @apply mt-2 text-lg sm:text-xl;
+    color: var(--color-muted);
   }
 
   .section-heading {

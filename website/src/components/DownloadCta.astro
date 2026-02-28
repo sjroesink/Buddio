@@ -1,81 +1,190 @@
 ---
-const platforms = [
+const scriptHost = "https://sjroesink.github.io/Buddio";
+
+const installs = [
   {
-    name: "Windows",
-    icon: `<svg viewBox="0 0 24 24" fill="currentColor" class="h-5 w-5"><path d="M0 3.449L9.75 2.1v9.451H0m10.949-9.602L24 0v11.4H10.949M0 12.6h9.75v9.451L0 20.699M10.949 12.6H24V24l-12.9-1.801"/></svg>`,
-    label: "Download for Windows",
-    sub: ".exe installer",
+    id: "windows",
+    label: "Windows",
+    os: "Windows",
+    shell: "PowerShell",
+    command: `irm ${scriptHost}/install.ps1 | iex`,
   },
   {
-    name: "macOS",
-    icon: `<svg viewBox="0 0 24 24" fill="currentColor" class="h-5 w-5"><path d="M18.71 19.5c-.83 1.24-1.71 2.45-3.05 2.47-1.34.03-1.77-.79-3.29-.79-1.53 0-2 .77-3.27.82-1.31.05-2.3-1.32-3.14-2.53C4.25 17 2.94 12.45 4.7 9.39c.87-1.52 2.43-2.48 4.12-2.51 1.28-.02 2.5.87 3.29.87.78 0 2.26-1.07 3.8-.91.65.03 2.47.26 3.64 1.98-.09.06-2.17 1.28-2.15 3.81.03 3.02 2.65 4.03 2.68 4.04-.03.07-.42 1.44-1.38 2.83M13 3.5c.73-.83 1.94-1.46 2.94-1.5.13 1.17-.34 2.35-1.04 3.19-.69.85-1.83 1.51-2.95 1.42-.15-1.15.41-2.35 1.05-3.11Z"/></svg>`,
-    label: "Download for macOS",
-    sub: ".dmg universal",
+    id: "macos",
+    label: "macOS",
+    os: "macOS",
+    shell: "Terminal",
+    command: `curl -fsSL ${scriptHost}/install-macos.sh | bash`,
   },
   {
-    name: "Linux",
-    icon: `<svg viewBox="0 0 24 24" fill="currentColor" class="h-5 w-5"><path d="M12.504 0c-.155 0-.315.008-.48.021-4.226.333-3.105 4.807-3.17 6.298-.076 1.092-.3 1.953-1.05 3.02-.885 1.051-2.127 2.75-2.716 4.521-.278.832-.41 1.684-.287 2.489a.424.424 0 0 0-.11.135c-.26.268-.45.6-.663.839-.199.199-.485.267-.797.4-.313.136-.658.269-.864.68-.09.189-.136.394-.132.602 0 .199.027.4.055.536.058.399.116.728.04.97-.249.68-.28 1.145-.106 1.484.174.334.535.47.94.601.81.2 1.91.135 2.774.6.926.466 1.866.67 2.616.47.526-.116.97-.464 1.208-.946.587-.003 1.23-.269 2.26-.334.699-.058 1.574.267 2.577.2.025.134.063.198.114.333l.003.003c.391.778 1.113 1.132 1.884 1.071.771-.06 1.592-.536 2.257-1.306.631-.765 1.683-1.084 2.378-1.503.348-.199.629-.469.649-.853.023-.4-.2-.811-.714-1.376v-.097l-.003-.003c-.17-.2-.25-.535-.338-.926-.2-.868-.564-2.115-2.143-3.074-.889-.537-1.958-1.159-2.78-1.852-.682-.57-1.207-1.2-1.44-1.937-.04-.7-.101-1.394-.237-2.038-.331-1.572-.81-2.96-2.135-3.867-1.056-.742-2.395-.95-3.636-.95zM12.679 1.87c.975.035 1.91.273 2.681.82 1.042.724 1.441 1.886 1.745 3.337.127.59.184 1.227.22 1.874-1.094-.904-2.653-1.4-3.78-1.204-.906.155-1.558.744-1.97 1.474-.416.75-.624 1.644-.634 2.453-.016 1.055-.3 1.977-1.038 3.069-.94 1.105-2.177 2.814-2.81 4.73l-.003.003c-.089.21-.14.433-.168.653a3.424 3.424 0 0 1-.025-.69c.104-.67.214-1.374.445-2.075.532-1.609 1.68-3.195 2.504-4.167.877-1.2 1.151-2.31 1.237-3.607.044-.94.204-2.893 1.596-3.537z"/></svg>`,
-    label: "Download for Linux",
-    sub: ".AppImage / .deb",
+    id: "linux",
+    label: "Linux",
+    os: "Linux",
+    shell: "Terminal",
+    command: `curl -fsSL ${scriptHost}/install-linux.sh | bash`,
   },
 ];
-
-const releaseUrl = "https://github.com/sjroesink/Buddio/releases/latest";
 ---
 
-<section id="download" class="relative py-32">
-  <!-- Gradient background -->
-  <div class="pointer-events-none absolute inset-0 overflow-hidden">
-    <div
-      class="absolute inset-x-0 top-0 h-px bg-gradient-to-r from-transparent via-launcher-accent/30 to-transparent"
-    >
-    </div>
-    <div
-      class="absolute left-1/2 top-1/2 h-[600px] w-[600px] -translate-x-1/2 -translate-y-1/2 rounded-full bg-launcher-accent/5 blur-3xl"
-    >
-    </div>
-  </div>
+<section id="download" class="relative pb-24 pt-8 sm:pb-28">
+  <div class="mx-auto max-w-6xl px-6">
+    <div class="download-tabs">
+      <div
+        class="download-tab-list"
+        role="tablist"
+        aria-label="Install command by operating system"
+      >
+        {
+          installs.map((install, index) => (
+            <button
+              type="button"
+              role="tab"
+              class={`download-tab ${index === 0 ? "is-active" : ""}`}
+              data-tab-id={install.id}
+              data-command={install.command}
+              data-shell={install.shell}
+              data-os-label={install.label}
+              aria-selected={index === 0 ? "true" : "false"}
+              tabindex={index === 0 ? "0" : "-1"}
+            >
+              {
+                install.id === "windows" && (
+                  <svg viewBox="0 0 24 24" fill="currentColor" class="download-tab-icon" aria-hidden="true">
+                    <path d="M2 3.5 10.25 2v9H2V3.5Zm9.75-1.73L22 0v11h-10.25V1.77ZM2 13h8.25v9L2 20.5V13Zm9.75 0H22v11l-10.25-1.5V13Z"></path>
+                  </svg>
+                )
+              }
+              {
+                install.id === "macos" && (
+                  <svg viewBox="0 0 24 24" fill="currentColor" class="download-tab-icon" aria-hidden="true">
+                    <path d="M16.9 12.4c0-2.2 1.8-3.3 1.9-3.4-1-1.5-2.7-1.7-3.3-1.7-1.4-.1-2.7.8-3.4.8-.7 0-1.8-.8-3-.8-1.5 0-2.9.9-3.6 2.2-1.6 2.8-.4 6.9 1.1 9.1.7 1.1 1.6 2.3 2.8 2.3 1.1 0 1.6-.7 3-.7s1.9.7 3 .7c1.2 0 2-1.1 2.8-2.2.8-1.3 1.2-2.6 1.2-2.7 0 0-2.4-.9-2.5-3.6ZM14.8 5.8c.6-.7 1-1.7.9-2.7-.9 0-2 .6-2.7 1.3-.6.7-1.1 1.7-1 2.7 1 .1 2.1-.5 2.8-1.3Z"></path>
+                  </svg>
+                )
+              }
+              {
+                install.id === "linux" && (
+                  <svg viewBox="0 0 24 24" fill="currentColor" class="download-tab-icon" aria-hidden="true">
+                    <path d="M12 1.5c-2.5 0-4.3 1.8-4.5 4.6-.1 1-.3 1.8-.9 2.6-1.2 1.4-2.8 3.7-2.8 6.1 0 2.6 1.9 4.7 4.5 4.7.8 0 1.6-.2 2.2-.6.6.4 1.4.6 2.2.6 2.6 0 4.5-2.1 4.5-4.7 0-2.4-1.6-4.7-2.8-6.1-.6-.8-.8-1.6-.9-2.6-.2-2.8-2-4.6-4.5-4.6Zm0 2c1.5 0 2.5 1.1 2.7 2.9.1 1.2.4 2.4 1.3 3.5 1.2 1.4 2.3 3.2 2.3 4.8 0 1.6-1.1 2.7-2.4 2.7-.7 0-1.3-.3-1.8-.8l-.6-.6-.6.6c-.5.5-1.1.8-1.8.8-1.3 0-2.4-1.1-2.4-2.7 0-1.6 1.1-3.4 2.3-4.8.9-1.1 1.2-2.3 1.3-3.5.2-1.8 1.2-2.9 2.7-2.9ZM9.4 12a1 1 0 1 1 0 2 1 1 0 0 1 0-2Zm5.2 0a1 1 0 1 1 0 2 1 1 0 0 1 0-2Z"></path>
+                  </svg>
+                )
+              }
+              {install.label}
+            </button>
+          ))
+        }
+      </div>
 
-  <div class="relative mx-auto max-w-4xl px-6 text-center">
-    <h2 class="section-heading mb-4 animate-slide-up" style="opacity: 0;">
-      Ready to <span class="gradient-text">launch</span>?
-    </h2>
-    <p
-      class="section-subheading mx-auto mb-12 animate-slide-up"
-      style="animation-delay: 0.1s; opacity: 0;"
-    >
-      Download Buddio and launch your helper flow in seconds on desktop.
-    </p>
+      <div class="download-panel" role="tabpanel">
+        <div class="download-meta-row">
+          <p id="download-shell-label" class="download-shell-label">{installs[0].shell}</p>
+          <p id="download-os-label" class="download-os-label">{installs[0].label}</p>
+        </div>
 
-    <!-- Platform buttons -->
-    <div
-      class="flex flex-col items-center justify-center gap-4 sm:flex-row animate-slide-up"
-      style="animation-delay: 0.2s; opacity: 0;"
-    >
-      {
-        platforms.map((platform) => (
-          <a
-            href={releaseUrl}
-            target="_blank"
-            rel="noopener noreferrer"
-            class="glass-card group flex w-full items-center gap-3 px-6 py-4 transition-all hover:bg-launcher-hover sm:w-auto"
+        <div class="download-command-row">
+          <code id="download-command" class="download-command">{installs[0].command}</code>
+          <button
+            id="download-copy"
+            type="button"
+            class="copy-btn"
+            data-copy={installs[0].command}
+            aria-label={`Copy ${installs[0].os} install command`}
           >
-            <div class="text-launcher-muted transition-colors group-hover:text-launcher-text">
-              <Fragment set:html={platform.icon} />
-            </div>
-            <div class="text-left">
-              <div class="text-sm font-semibold" style="color: var(--heading-color);">
-                {platform.label}
-              </div>
-              <div class="text-xs text-launcher-muted">{platform.sub}</div>
-            </div>
-          </a>
-        ))
-      }
+            Copy
+          </button>
+        </div>
+      </div>
     </div>
-
-    <p class="mt-10 text-sm text-launcher-muted animate-slide-up" style="animation-delay: 0.3s; opacity: 0;">
-      Optional terminal automation is available later with <code class="code-inline">buddio-cli</code>.
-    </p>
   </div>
 </section>
+
+<script is:inline>
+  const tabButtons = Array.from(document.querySelectorAll(".download-tab"));
+  const shellLabel = document.getElementById("download-shell-label");
+  const osLabel = document.getElementById("download-os-label");
+  const commandNode = document.getElementById("download-command");
+  const copyButton = document.getElementById("download-copy");
+
+  function detectTabIdFromOs() {
+    const platform = (navigator.platform || "").toLowerCase();
+    const userAgent = (navigator.userAgent || "").toLowerCase();
+
+    if (platform.includes("win")) return "windows";
+    if (
+      platform.includes("mac") ||
+      userAgent.includes("mac os") ||
+      userAgent.includes("darwin")
+    ) {
+      return "macos";
+    }
+    if (platform.includes("linux") || userAgent.includes("linux")) return "linux";
+    return null;
+  }
+
+  function activateTab(tabId) {
+    const active = tabButtons.find((button) => button.dataset.tabId === tabId) || tabButtons[0];
+    if (!active) return;
+
+    const command = active.dataset.command || "";
+    const shell = active.dataset.shell || "";
+    const os = active.dataset.osLabel || "";
+
+    tabButtons.forEach((button) => {
+      const isActive = button === active;
+      button.classList.toggle("is-active", isActive);
+      button.setAttribute("aria-selected", String(isActive));
+      button.tabIndex = isActive ? 0 : -1;
+    });
+
+    if (commandNode) commandNode.textContent = command;
+    if (shellLabel) shellLabel.textContent = shell;
+    if (osLabel) osLabel.textContent = os;
+    if (copyButton) {
+      copyButton.setAttribute("data-copy", command);
+      copyButton.setAttribute("aria-label", `Copy ${os} install command`);
+    }
+  }
+
+  tabButtons.forEach((button) => {
+    button.addEventListener("click", () => {
+      const tabId = button.dataset.tabId;
+      if (tabId) activateTab(tabId);
+    });
+  });
+
+  activateTab(detectTabIdFromOs() || tabButtons[0]?.dataset.tabId || "windows");
+
+  function copyText(command) {
+    if (navigator.clipboard && navigator.clipboard.writeText) {
+      return navigator.clipboard.writeText(command);
+    }
+
+    const area = document.createElement("textarea");
+    area.value = command;
+    area.style.position = "fixed";
+    area.style.opacity = "0";
+    document.body.appendChild(area);
+    area.focus();
+    area.select();
+    document.execCommand("copy");
+    document.body.removeChild(area);
+    return Promise.resolve();
+  }
+
+  copyButton?.addEventListener("click", async () => {
+    const command = copyButton.getAttribute("data-copy");
+    if (!command) return;
+
+    const original = copyButton.textContent;
+
+    try {
+      await copyText(command);
+      copyButton.textContent = "Copied";
+    } catch {
+      copyButton.textContent = "Failed";
+    }
+
+    setTimeout(() => {
+      copyButton.textContent = original;
+    }, 1200);
+  });
+</script>
