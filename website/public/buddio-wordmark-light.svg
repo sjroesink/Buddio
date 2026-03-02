@@ -75,6 +75,6 @@
   <path d="M 116 92 Q 125 102 134 92" fill="none" stroke="#38bdf8" stroke-width="4" stroke-linecap="round"/>
   <path d="M 85 55 Q 125 50 165 55" fill="none" stroke="#ffffff" stroke-width="4" stroke-linecap="round" opacity="0.5"/>
 
-  <text x="290" y="128" font-family="'Nunito', 'Varela Round', 'Segoe UI Rounded', sans-serif" font-size="96" font-weight="800" fill="#2E2418">buddio</text>
-  <text x="292" y="165" font-family="'Nunito', 'Varela Round', 'Segoe UI Rounded', sans-serif" font-size="29" font-weight="600" fill="#4A82C2" letter-spacing="1">Your desktop's best friend</text>
+  <text x="290" y="128" font-family="'Nunito', 'Varela Round', 'Segoe UI Rounded', sans-serif" font-size="96" font-weight="800" fill="#1C2542">buddio</text>
+  <text x="292" y="165" font-family="'Nunito', 'Varela Round', 'Segoe UI Rounded', sans-serif" font-size="29" font-weight="600" fill="#5B6FD4" letter-spacing="1">Your desktop's best friend</text>
 </svg>

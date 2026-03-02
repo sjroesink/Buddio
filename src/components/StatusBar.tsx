@@ -25,9 +25,9 @@ function StatusBar({
           <>
             <span>
               <kbd className="px-1 py-0.5 rounded bg-launcher-surface/50 border border-launcher-border/20">
-                Ctrl+S
+                ↑↓
               </kbd>{" "}
-              save command
+              suggest
             </span>
             <span>
               <kbd className="px-1 py-0.5 rounded bg-launcher-surface/50 border border-launcher-border/20">

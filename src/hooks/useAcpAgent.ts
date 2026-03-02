@@ -15,6 +15,55 @@ function makeMessageId(prefix: "user" | "assistant") {
   return `${prefix}-${Date.now()}-${Math.random().toString(36).slice(2, 10)}`;
 }
 
+function normalizeToolStatus(
+  rawStatus: string | null | undefined,
+): AgentThreadMessage["toolStatus"] | null {
+  if (!rawStatus) return null;
+
+  const normalized = rawStatus.toLowerCase().replace(/\s+/g, "");
+
+  if (
+    normalized.includes("error") ||
+    normalized.includes("fail") ||
+    normalized.includes("cancel") ||
+    normalized.includes("deny") ||
+    normalized.includes("reject")
+  ) {
+    return "error";
+  }
+
+  if (
+    normalized.includes("complete") ||
+    normalized.includes("done") ||
+    normalized.includes("success")
+  ) {
+    return "completed";
+  }
+
+  if (normalized.includes("approve") || normalized.includes("allow")) {
+    return "approved";
+  }
+
+  if (
+    normalized.includes("pending") ||
+    normalized.includes("await") ||
+    normalized.includes("queue")
+  ) {
+    return "pending";
+  }
+
+  if (
+    normalized.includes("running") ||
+    normalized.includes("inprogress") ||
+    normalized.includes("execut") ||
+    normalized.includes("start")
+  ) {
+    return "running";
+  }
+
+  return null;
+}
+
 export function useAcpAgent() {
   const [status, setStatus] = useState<AgentStatus>("disconnected");
   const [messages, setMessages] = useState("");
@@ -87,6 +136,7 @@ export function useAcpAgent() {
                 content: "",
                 toolTitle: update.title ?? "Tool",
                 toolStatus: "running" as const,
+                toolKind: update.kind,
                 toolContent: update.content ?? undefined,
               },
               { id: newAssistantId, role: "assistant" as const, content: "" },
@@ -97,18 +147,15 @@ export function useAcpAgent() {
         case "tool_call_update": {
           // Update existing tool call entry status
           const toolEntryId = `tool-${update.id}`;
+          const normalizedStatus = normalizeToolStatus(update.status);
           setThread((prev) =>
             prev.map((entry) =>
               entry.id === toolEntryId
                 ? {
                     ...entry,
                     toolTitle: update.title ?? entry.toolTitle,
-                    toolStatus:
-                      update.status === "Some(Complete)"
-                        ? "completed"
-                        : update.status === "Some(Error)"
-                          ? "error"
-                          : entry.toolStatus,
+                    toolStatus: normalizedStatus ?? entry.toolStatus,
+                    toolStatusRaw: update.status ?? entry.toolStatusRaw,
                   }
                 : entry,
             ),
@@ -120,6 +167,26 @@ export function useAcpAgent() {
         case "turn_complete": {
           setTurnActive(false);
           setIsThinking(false);
+          const turnCancelled = update.stop_reason.toLowerCase().includes("cancel");
+
+          // Some ACP providers don't always emit a final tool_call_update.
+          // Finalize still-running tool entries when the turn ends.
+          setThread((prev) =>
+            prev.map((entry) => {
+              if (entry.role !== "tool") return entry;
+              const currentStatus = entry.toolStatus ?? "running";
+              if (currentStatus !== "running") return entry;
+              return {
+                ...entry,
+                toolStatus: turnCancelled ? "error" : "completed",
+                toolStatusRaw:
+                  entry.toolStatusRaw ??
+                  (turnCancelled
+                    ? "Cancelled (inferred on turn_complete)"
+                    : "Complete (inferred on turn_complete)"),
+              };
+            }),
+          );
 
           // Persist combined assistant messages to the database
           const convId = activeConversationIdRef.current;

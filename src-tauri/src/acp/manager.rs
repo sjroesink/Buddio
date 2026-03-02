@@ -1001,7 +1001,9 @@ fn build_agent_prompt(
     // ── Launch context ──
     let has_context = launch_context.selected_text.is_some()
         || launch_context.clipboard_text.is_some()
-        || launch_context.source_window_title.is_some();
+        || launch_context.source_window_title.is_some()
+        || launch_context.source_process_name.is_some()
+        || launch_context.source_process_path.is_some();
 
     if has_context {
         p.push_str("## Current Context\n");
@@ -1011,6 +1013,11 @@ fn build_agent_prompt(
                 .as_deref()
                 .unwrap_or("unknown");
             p.push_str(&format!("Source application: {} ({})\n", title, process));
+        } else if let Some(ref process) = launch_context.source_process_name {
+            p.push_str(&format!("Source process: {}\n", process));
+        }
+        if let Some(ref process_path) = launch_context.source_process_path {
+            p.push_str(&format!("Source process path: {}\n", process_path));
         }
         if let Some(ref text) = launch_context.selected_text {
             let truncated = if text.len() > 2000 {

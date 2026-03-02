@@ -1,38 +1,40 @@
 /* Theme variables — outside @layer so Tailwind won't purge them */
 :root {
-  --color-bg: #fff8ef;
-  --color-surface: #fffdf8;
-  --color-border: #f2d8b3;
-  --color-text: #2e2418;
-  --color-muted: #806a50;
-  --color-hover: #fff0dc;
-  --color-selected: #ffe5c1;
-  --glass-bg: rgba(255, 248, 239, 0.72);
-  --glass-border: rgba(130, 83, 31, 0.18);
-  --code-bg: rgba(130, 83, 31, 0.08);
-  --heading-color: #24190f;
-  --badge-bg: rgba(217, 119, 6, 0.08);
-  --badge-border: rgba(217, 119, 6, 0.24);
-  --accent-glow: 217, 119, 6;
-  --accent-secondary: 56, 189, 248;
+  --color-bg: #f3f5ff;
+  --color-surface: #fafbff;
+  --color-border: #cfd7f1;
+  --color-text: #1f2643;
+  --color-muted: #646f98;
+  --color-hover: #edf1ff;
+  --color-selected: #dfe6ff;
+  --glass-bg: rgba(246, 249, 255, 0.78);
+  --glass-border: rgba(86, 102, 173, 0.22);
+  --code-bg: rgba(72, 91, 173, 0.12);
+  --heading-color: #18203a;
+  --badge-bg: rgba(86, 104, 197, 0.1);
+  --badge-border: rgba(86, 104, 197, 0.28);
+  --accent-glow: 122, 106, 237;
+  --accent-secondary: 76, 162, 255;
+  --accent-berry: 159, 52, 86;
 }
 
 .dark {
-  --color-bg: #1d130b;
-  --color-surface: #2a1b10;
-  --color-border: #5a3a1c;
-  --color-text: #fff0dc;
-  --color-muted: #c6ae90;
-  --color-hover: #372213;
-  --color-selected: #4a2c14;
-  --glass-bg: rgba(42, 27, 16, 0.78);
-  --glass-border: rgba(255, 214, 161, 0.17);
-  --code-bg: rgba(255, 214, 161, 0.09);
-  --heading-color: #fff7eb;
-  --badge-bg: rgba(245, 158, 11, 0.16);
-  --badge-border: rgba(245, 158, 11, 0.32);
-  --accent-glow: 251, 146, 60;
-  --accent-secondary: 125, 211, 252;
+  --color-bg: #0d1022;
+  --color-surface: #151a38;
+  --color-border: #2d3870;
+  --color-text: #e8ecff;
+  --color-muted: #9ea8d6;
+  --color-hover: #1b2350;
+  --color-selected: #253062;
+  --glass-bg: rgba(20, 26, 58, 0.78);
+  --glass-border: rgba(88, 110, 208, 0.32);
+  --code-bg: rgba(15, 22, 52, 0.78);
+  --heading-color: #f4f6ff;
+  --badge-bg: rgba(90, 108, 204, 0.24);
+  --badge-border: rgba(110, 130, 230, 0.42);
+  --accent-glow: 133, 114, 255;
+  --accent-secondary: 82, 167, 255;
+  --accent-berry: 190, 70, 111;
 }
 
 @tailwind base;
@@ -47,8 +49,9 @@
   body {
     @apply bg-launcher-bg text-launcher-text antialiased;
     background-image:
-      radial-gradient(circle at 6% 8%, rgba(var(--accent-secondary), 0.16), transparent 32%),
-      radial-gradient(circle at 92% 18%, rgba(var(--accent-glow), 0.16), transparent 34%);
+      radial-gradient(circle at 8% 7%, rgba(var(--accent-secondary), 0.18), transparent 34%),
+      radial-gradient(circle at 87% 15%, rgba(var(--accent-glow), 0.17), transparent 34%),
+      radial-gradient(circle at 62% 78%, rgba(var(--accent-berry), 0.11), transparent 42%);
     background-attachment: fixed;
     line-height: 1.6;
     transition: background-color 0.3s ease, color 0.3s ease;
@@ -70,7 +73,7 @@
   }
 
   .gradient-text {
-    @apply bg-clip-text text-transparent bg-gradient-to-r from-orange-500 via-amber-400 to-sky-500;
+    @apply bg-clip-text text-transparent bg-gradient-to-r from-blue-500 via-indigo-500 to-rose-500;
   }
 
   .glow-accent {
@@ -124,7 +127,11 @@
   .download-tab.is-active {
     color: var(--heading-color);
     border-bottom-color: rgb(var(--accent-glow));
-    background: var(--badge-bg);
+    background: linear-gradient(
+      180deg,
+      var(--badge-bg),
+      rgba(var(--accent-berry), 0.1)
+    );
   }
 
   .download-panel {
@@ -153,7 +160,7 @@
 
   .download-command {
     @apply block w-full overflow-x-auto whitespace-nowrap py-1 text-base sm:text-lg;
-    color: rgb(var(--accent-glow));
+    color: rgb(var(--accent-secondary));
     font-family: "JetBrains Mono", "SF Mono", "Fira Code", monospace;
   }
 
@@ -166,12 +173,12 @@
   }
 
   .copy-btn:hover {
-    border-color: var(--color-border);
-    background: var(--color-hover);
+    border-color: rgba(var(--accent-berry), 0.55);
+    background: rgba(var(--accent-berry), 0.16);
   }
 
   .copy-btn:focus-visible {
-    outline: 2px solid rgba(var(--accent-glow), 0.6);
+    outline: 2px solid rgba(var(--accent-secondary), 0.62);
     outline-offset: 2px;
   }
 
@@ -182,10 +189,14 @@
   }
 
   .use-case-trigger:hover,
-  .use-case-trigger:focus-visible,
-  .use-case-trigger.is-active {
+  .use-case-trigger:focus-visible {
     border-color: var(--color-border);
     background: var(--color-hover);
+  }
+
+  .use-case-trigger.is-active {
+    border-color: rgba(var(--accent-secondary), 0.5);
+    background: linear-gradient(135deg, var(--color-hover), rgba(var(--accent-berry), 0.12));
   }
 
   .use-case-trigger:focus-visible {

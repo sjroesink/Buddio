@@ -12,13 +12,15 @@ pub struct LaunchContext {
     pub source_window_title: Option<String>,
     /// Process name of the source application (e.g. "Code.exe", "chrome.exe").
     pub source_process_name: Option<String>,
+    /// Full executable path of the source process (e.g. "C:\\Program Files\\...\\Code.exe").
+    pub source_process_path: Option<String>,
 }
 
 /// Capture the full launch context from the OS.
 /// Must be called *before* the launcher window takes focus.
 pub fn capture_launch_context() -> LaunchContext {
     let source_window_title = get_foreground_window_title();
-    let source_process_name = get_foreground_process_name();
+    let (source_process_name, source_process_path) = get_foreground_process_info();
     let clipboard_text = get_clipboard_text();
     let selected_text = capture_selected_text(&clipboard_text);
 
@@ -27,6 +29,7 @@ pub fn capture_launch_context() -> LaunchContext {
         selected_text,
         source_window_title,
         source_process_name,
+        source_process_path,
     }
 }
 
@@ -98,19 +101,19 @@ fn get_foreground_window_title() -> Option<String> {
     }
 }
 
-/// Get the process name of the foreground window.
-fn get_foreground_process_name() -> Option<String> {
+/// Get process metadata (name + full executable path) for the foreground window.
+fn get_foreground_process_info() -> (Option<String>, Option<String>) {
     #[cfg(target_os = "windows")]
     {
-        win32::get_foreground_process_name()
+        win32::get_foreground_process_info()
     }
     #[cfg(target_os = "macos")]
     {
-        macos::get_foreground_process_name()
+        macos::get_foreground_process_info()
     }
     #[cfg(target_os = "linux")]
     {
-        None
+        (None, None)
     }
 }
 
@@ -187,18 +190,18 @@ mod win32 {
         }
     }
 
-    pub fn get_foreground_process_name() -> Option<String> {
+    pub fn get_foreground_process_info() -> (Option<String>, Option<String>) {
         unsafe {
             let hwnd = GetForegroundWindow();
             if hwnd == HWND::default() {
-                return None;
+                return (None, None);
             }
 
             let mut process_id: u32 = 0;
             GetWindowThreadProcessId(hwnd, Some(&mut process_id));
 
             if process_id == 0 {
-                return None;
+                return (None, None);
             }
 
             use windows::Win32::System::Threading::{
@@ -206,7 +209,10 @@ mod win32 {
                 PROCESS_QUERY_LIMITED_INFORMATION,
             };
 
-            let process = OpenProcess(PROCESS_QUERY_LIMITED_INFORMATION, false, process_id).ok()?;
+            let process = match OpenProcess(PROCESS_QUERY_LIMITED_INFORMATION, false, process_id) {
+                Ok(p) => p,
+                Err(_) => return (None, None),
+            };
 
             let mut name_buf = vec![0u16; 1024];
             let mut size = name_buf.len() as u32;
@@ -221,14 +227,14 @@ mod win32 {
 
             if ok.is_ok() && size > 0 {
                 let full_path = String::from_utf16_lossy(&name_buf[..size as usize]);
-                let name = full_path
-                    .rsplit('\\')
-                    .next()
-                    .unwrap_or(&full_path)
-                    .to_string();
-                Some(name)
+                let name = std::path::Path::new(&full_path)
+                    .file_name()
+                    .and_then(|n| n.to_str())
+                    .map(|n| n.to_string())
+                    .unwrap_or_else(|| full_path.clone());
+                (Some(name), Some(full_path))
             } else {
-                None
+                (None, None)
             }
         }
     }
@@ -265,7 +271,7 @@ mod macos {
         }
     }
 
-    pub fn get_foreground_process_name() -> Option<String> {
+    fn get_foreground_process_name() -> Option<String> {
         let output = Command::new("osascript")
             .args([
                 "-e",
@@ -283,5 +289,33 @@ mod macos {
         } else {
             Some(text)
         }
+    }
+
+    fn get_foreground_process_path() -> Option<String> {
+        let output = Command::new("osascript")
+            .args([
+                "-e",
+                r#"tell application "System Events"
+                    set frontApp to first application process whose frontmost is true
+                    try
+                        return POSIX path of (file of frontApp as alias)
+                    on error
+                        return ""
+                    end try
+                end tell"#,
+            ])
+            .output()
+            .ok()?;
+
+        let text = String::from_utf8_lossy(&output.stdout).trim().to_string();
+        if text.is_empty() {
+            None
+        } else {
+            Some(text)
+        }
+    }
+
+    pub fn get_foreground_process_info() -> (Option<String>, Option<String>) {
+        (get_foreground_process_name(), get_foreground_process_path())
     }
 }

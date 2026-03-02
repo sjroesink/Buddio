@@ -33,7 +33,8 @@
       "mcp__golaunch__items_update",
       "mcp__buddio__items_update",
       "mcp__buddio__items_run",
-      "mcp__buddio__items_remove"
+      "mcp__buddio__items_remove",
+      "mcp__buddio__slash_commands_remove"
     ]
   }
 }

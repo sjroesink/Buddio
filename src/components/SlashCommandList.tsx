@@ -1,7 +1,8 @@
-import type { SlashCommand } from "../types";
+import type { SlashCommand, SlashCommandParam } from "../types";
 
 interface SlashCommandListProps {
   commands: SlashCommand[];
+  commandParamsByName: Record<string, SlashCommandParam[]>;
   query: string;
   selectedIndex: number;
   onSelect: (index: number) => void;
@@ -10,11 +11,19 @@ interface SlashCommandListProps {
 
 function SlashCommandList({
   commands,
+  commandParamsByName,
   query,
   selectedIndex,
   onSelect,
   onExecute,
 }: SlashCommandListProps) {
+  const formatSignature = (name: string, params: SlashCommandParam[]) => {
+    const args = params
+      .map((param) => (param.required ? `<${param.name}>` : `[${param.name}]`))
+      .join(" ");
+    return args ? `/${name} ${args}` : `/${name}`;
+  };
+
   return (
     <div className="window-no-drag flex-1 overflow-y-auto px-2 py-2">
       <div className="px-3 py-2 text-xs text-launcher-muted/70">
@@ -31,6 +40,7 @@ function SlashCommandList({
 
       {commands.map((cmd, index) => {
         const isSelected = index === selectedIndex;
+        const params = commandParamsByName[cmd.name] ?? [];
         return (
           <button
             key={cmd.id}
@@ -65,6 +75,15 @@ function SlashCommandList({
               {cmd.description && (
                 <p className="text-xs text-launcher-muted/70 truncate mt-0.5">
                   {cmd.description}
+                </p>
+              )}
+              {params.length > 0 && (
+                <p
+                  className={`text-[11px] font-mono truncate mt-1 ${
+                    isSelected ? "text-launcher-text/90" : "text-launcher-muted/70"
+                  }`}
+                >
+                  {formatSignature(cmd.name, params)}
                 </p>
               )}
             </div>

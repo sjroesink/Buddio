@@ -8,6 +8,7 @@ const EMPTY_CONTEXT: LaunchContext = {
   selected_text: null,
   source_window_title: null,
   source_process_name: null,
+  source_process_path: null,
 };
 
 export function useLaunchContext() {

@@ -14,6 +14,7 @@ interface ContextInfo {
   hasClipboard: boolean;
   sourceApp: string | null;
   sourceProcessName: string | null;
+  sourceProcessPath?: string | null;
   selectedText?: string | null;
   clipboardText?: string | null;
 }

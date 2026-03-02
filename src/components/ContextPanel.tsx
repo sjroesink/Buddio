@@ -5,6 +5,7 @@ interface ContextInfo {
   hasClipboard: boolean;
   sourceApp: string | null;
   sourceProcessName: string | null;
+  sourceProcessPath: string | null;
   selectedText?: string | null;
   clipboardText?: string | null;
 }
@@ -45,7 +46,11 @@ export function ContextPanel({
   onRemoveClipboard,
   onRemoveImage,
 }: ContextPanelProps) {
-  const hasSourceApp = !!contextInfo.sourceApp;
+  const hasSourceApp = !!(
+    contextInfo.sourceApp ||
+    contextInfo.sourceProcessName ||
+    contextInfo.sourceProcessPath
+  );
   const hasAny =
     hasSourceApp || contextInfo.hasSelection || contextInfo.hasClipboard || images.length > 0;
 
@@ -54,7 +59,9 @@ export function ContextPanel({
   // Derive a short app name from the process name (e.g. "Code.exe" → "Code")
   const appName = contextInfo.sourceProcessName
     ? contextInfo.sourceProcessName.replace(/\.exe$/i, "")
-    : null;
+    : contextInfo.sourceProcessPath
+      ? contextInfo.sourceProcessPath.split(/[\\/]/).pop()?.replace(/\.exe$/i, "") ?? null
+      : null;
 
   return (
     <div className="flex-1 flex flex-col min-h-0 overflow-y-auto">
@@ -79,8 +86,13 @@ export function ContextPanel({
               </span>
             </div>
             <div className="text-xs text-launcher-text/80 truncate leading-relaxed">
-              {contextInfo.sourceApp}
+              {contextInfo.sourceApp || contextInfo.sourceProcessName || "Unknown source app"}
             </div>
+            {contextInfo.sourceProcessPath && (
+              <div className="mt-1 text-[11px] text-launcher-muted/80 break-all font-mono">
+                {contextInfo.sourceProcessPath}
+              </div>
+            )}
           </div>
         )}
 

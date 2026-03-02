@@ -38,6 +38,8 @@ export interface AgentThreadMessage {
   // Tool call fields (only when role === "tool")
   toolTitle?: string;
   toolStatus?: "pending" | "approved" | "running" | "completed" | "error";
+  toolStatusRaw?: string | null;
+  toolKind?: string;
   toolContent?: string;
   commandPreview?: string;
 }
@@ -98,6 +100,7 @@ export interface LaunchContext {
   selected_text: string | null;
   source_window_title: string | null;
   source_process_name: string | null;
+  source_process_path: string | null;
 }
 
 export interface CommandSuggestion {

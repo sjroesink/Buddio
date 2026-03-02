@@ -409,29 +409,69 @@ export function AgentResponse({
               entry.toolStatus === "completed"
                 ? "DONE"
                 : (entry.toolStatus ?? "running").toUpperCase();
-            const hasDetails = !!(entry.toolContent || entry.commandPreview);
             const isExpanded = expandedTools.has(entry.id);
+            const detailsId = `tool-details-${entry.id.replace(/[^a-zA-Z0-9_-]/g, "-")}`;
+            const toolPayload = entry.toolContent ?? entry.commandPreview;
             return (
               <div key={entry.id}>
-                <div
-                  className={`tool-call-entry${hasDetails ? "" : " tool-call-no-expand"}`}
-                  onClick={hasDetails ? () => toggleExpanded(entry.id) : undefined}
+                <button
+                  type="button"
+                  className={`tool-call-entry${isExpanded ? " tool-call-entry-expanded" : ""}`}
+                  onClick={() => toggleExpanded(entry.id)}
+                  aria-expanded={isExpanded}
+                  aria-controls={detailsId}
                 >
-                  {hasDetails && (
-                    <span className="tool-call-chevron">
-                      {isExpanded ? "\u25BC" : "\u25B6"}
-                    </span>
-                  )}
+                  <span className="tool-call-chevron">
+                    {isExpanded ? "\u25BC" : "\u25B6"}
+                  </span>
                   <span className="tool-call-title">
                     {friendlyToolTitle(entry.toolTitle ?? "Tool")}
                   </span>
                   <span className={`tool-call-status ${statusClass}`}>
                     {statusLabel}
                   </span>
-                </div>
-                {isExpanded && hasDetails && (
-                  <div className="tool-call-details">
-                    <pre>{entry.toolContent || entry.commandPreview}</pre>
+                </button>
+                {isExpanded && (
+                  <div id={detailsId} className="tool-call-details">
+                    <div className="tool-call-details-meta">
+                      <div className="tool-call-details-row">
+                        <span className="tool-call-details-label">Tool</span>
+                        <span className="tool-call-details-value">
+                          {entry.toolTitle ?? "Tool"}
+                        </span>
+                      </div>
+                      <div className="tool-call-details-row">
+                        <span className="tool-call-details-label">Call ID</span>
+                        <span className="tool-call-details-value">
+                          {entry.id.replace(/^tool-/, "")}
+                        </span>
+                      </div>
+                      {entry.toolKind && (
+                        <div className="tool-call-details-row">
+                          <span className="tool-call-details-label">Kind</span>
+                          <span className="tool-call-details-value">
+                            {entry.toolKind}
+                          </span>
+                        </div>
+                      )}
+                      {entry.toolStatusRaw && (
+                        <div className="tool-call-details-row">
+                          <span className="tool-call-details-label">
+                            Raw status
+                          </span>
+                          <span className="tool-call-details-value">
+                            {entry.toolStatusRaw}
+                          </span>
+                        </div>
+                      )}
+                    </div>
+                    {toolPayload ? (
+                      <pre>{toolPayload}</pre>
+                    ) : (
+                      <div className="tool-call-details-empty">
+                        No payload captured for this tool call.
+                      </div>
+                    )}
                   </div>
                 )}
                 {isPending && permissionRequest && (

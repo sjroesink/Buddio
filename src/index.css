@@ -345,6 +345,9 @@ body,
   display: flex;
   align-items: center;
   gap: 6px;
+  width: 100%;
+  text-align: left;
+  font: inherit;
   padding: 4px 10px;
   margin-bottom: 4px;
   font-size: 12px;
@@ -353,8 +356,17 @@ body,
   border: 1px solid rgba(255, 255, 255, 0.06);
   cursor: pointer;
 }
-.tool-call-entry.tool-call-no-expand {
-  cursor: default;
+.tool-call-entry:hover {
+  background: rgba(255, 255, 255, 0.05);
+}
+.tool-call-entry:focus-visible {
+  outline: none;
+  border-color: rgba(99, 102, 241, 0.5);
+  box-shadow: 0 0 0 1px rgba(99, 102, 241, 0.25);
+}
+.tool-call-entry-expanded {
+  border-color: rgba(99, 102, 241, 0.3);
+  background: rgba(99, 102, 241, 0.08);
 }
 .tool-call-chevron {
   font-size: 8px;
@@ -380,10 +392,30 @@ body,
   max-height: 200px;
   overflow-y: auto;
 }
+.tool-call-details-meta {
+  margin-bottom: 6px;
+}
+.tool-call-details-row {
+  display: flex;
+  align-items: baseline;
+  gap: 6px;
+  line-height: 1.35;
+}
+.tool-call-details-label {
+  min-width: 56px;
+  color: rgba(255, 255, 255, 0.45);
+}
+.tool-call-details-value {
+  color: rgba(255, 255, 255, 0.72);
+  word-break: break-all;
+}
 .tool-call-details pre {
   white-space: pre-wrap;
   word-break: break-all;
   margin: 0;
+}
+.tool-call-details-empty {
+  color: rgba(255, 255, 255, 0.45);
 }
 .tool-call-status {
   padding: 1px 6px;

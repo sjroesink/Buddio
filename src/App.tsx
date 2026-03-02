@@ -180,7 +180,11 @@ function App() {
     setContextPanelOpen((prev) => !prev);
   }, []);
 
-  const hasSourceApp = !!launchCtx.context.source_window_title;
+  const hasSourceApp = !!(
+    launchCtx.context.source_window_title ||
+    launchCtx.context.source_process_name ||
+    launchCtx.context.source_process_path
+  );
   const contextCount =
     (hasSourceApp ? 1 : 0) +
     (launchCtx.hasSelection ? 1 : 0) +
@@ -516,6 +520,7 @@ function App() {
                 hasClipboard: launchCtx.hasClipboard,
                 sourceApp: launchCtx.context.source_window_title,
                 sourceProcessName: launchCtx.context.source_process_name,
+                sourceProcessPath: launchCtx.context.source_process_path,
                 selectedText: launchCtx.context.selected_text,
                 clipboardText: launchCtx.context.clipboard_text,
               }}
@@ -541,6 +546,7 @@ function App() {
               hasClipboard: launchCtx.hasClipboard,
               sourceApp: launchCtx.context.source_window_title,
               sourceProcessName: launchCtx.context.source_process_name,
+              sourceProcessPath: launchCtx.context.source_process_path,
               selectedText: launchCtx.context.selected_text,
               clipboardText: launchCtx.context.clipboard_text,
             }}
@@ -595,6 +601,7 @@ function App() {
                 (launcher.isSlashMode && !launcher.paramEntryMode ? (
                   <SlashCommandList
                     commands={launcher.slashCommands}
+                    commandParamsByName={launcher.slashCommandParamsByName}
                     query={launcher.query}
                     selectedIndex={launcher.selectedSlashIndex}
                     onSelect={launcher.setSelectedSlashIndex}
@@ -608,8 +615,6 @@ function App() {
                     query={launcher.query}
                     selectedIndex={launcher.selectedSuggestionIndex}
                     onSelect={launcher.selectSuggestion}
-                    onSave={launcher.saveCommandFromSuggestion}
-                    saving={launcher.savingCommand}
                   />
                 ) : showResults ? (
                   <ItemList

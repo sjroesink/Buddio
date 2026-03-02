@@ -39,6 +39,7 @@ vi.mock("../../src/hooks/useLaunchContext", () => ({
       selected_text: null,
       source_window_title: null,
       source_process_name: null,
+      source_process_path: null,
     },
     clearContext: vi.fn(),
     typeText: vi.fn(),

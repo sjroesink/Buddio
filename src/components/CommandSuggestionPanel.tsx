@@ -5,8 +5,6 @@ interface CommandSuggestionPanelProps {
   query: string;
   selectedIndex: number;
   onSelect: (index: number) => void;
-  onSave: (suggestion: CommandSuggestion) => void;
-  saving: boolean;
 }
 
 const REASON_LABELS: Record<string, string> = {
@@ -20,8 +18,6 @@ function CommandSuggestionPanel({
   query,
   selectedIndex,
   onSelect,
-  onSave,
-  saving,
 }: CommandSuggestionPanelProps) {
   return (
     <div className="window-no-drag flex-1 overflow-y-auto px-2 py-2">
@@ -62,29 +58,8 @@ function CommandSuggestionPanel({
                 </span>
               </div>
               <p className="text-xs text-launcher-muted/70 truncate mt-0.5">
-                Save as a predefined command
+                Suggested command
               </p>
-            </div>
-
-            <div className="flex items-center gap-2 ml-2 flex-shrink-0">
-              {index === 0 && (
-                <span
-                  onClick={(e) => {
-                    e.stopPropagation();
-                    onSave(suggestion);
-                  }}
-                  className={`flex items-center gap-1 text-[10px] px-2 py-1 rounded border transition-colors ${
-                    saving
-                      ? "opacity-50 cursor-default bg-launcher-accent/20 text-launcher-accent border-launcher-accent/30"
-                      : "bg-launcher-accent/20 text-launcher-accent border-launcher-accent/30 hover:bg-launcher-accent/30"
-                  }`}
-                >
-                  {saving ? "Saving..." : "Save"}
-                  <kbd className="text-[9px] px-1 py-0.5 rounded bg-launcher-surface text-launcher-muted border border-launcher-border/30 ml-1">
-                    Ctrl+S
-                  </kbd>
-                </span>
-              )}
             </div>
           </button>
         );

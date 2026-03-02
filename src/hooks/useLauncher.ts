@@ -24,9 +24,11 @@ export function useLauncher(options: UseLauncherOptions) {
   const [suggestions, setSuggestions] = useState<CommandSuggestion[]>([]);
   const [selectedSuggestionIndex, setSelectedSuggestionIndex] = useState(-1);
   const [focusInputSignal, setFocusInputSignal] = useState(0);
-  const [savingCommand, setSavingCommand] = useState(false);
   const [slashCommands, setSlashCommands] = useState<SlashCommand[]>([]);
-  const [selectedSlashIndex, setSelectedSlashIndex] = useState(0);
+  const [slashCommandParamsByName, setSlashCommandParamsByName] = useState<
+    Record<string, SlashCommandParam[]>
+  >({});
+  const [selectedSlashIndex, setSelectedSlashIndex] = useState(-1);
   const [paramEntryMode, setParamEntryMode] = useState(false);
   const [currentParamIndex, setCurrentParamIndex] = useState(0);
   const [activeCommandParams, setActiveCommandParams] = useState<SlashCommandParam[]>([]);
@@ -105,7 +107,8 @@ export function useLauncher(options: UseLauncherOptions) {
   useEffect(() => {
     if (!isSlashMode) {
       setSlashCommands([]);
-      setSelectedSlashIndex(0);
+      setSlashCommandParamsByName({});
+      setSelectedSlashIndex(-1);
       setParamEntryMode(false);
       setActiveCommandParams([]);
       setActiveCommandName("");
@@ -123,18 +126,60 @@ export function useLauncher(options: UseLauncherOptions) {
       invoke<SlashCommand[]>("list_slash_commands")
         .then((cmds) => {
           setSlashCommands(cmds);
-          setSelectedSlashIndex(0);
+          setSelectedSlashIndex(-1);
         })
         .catch(() => setSlashCommands([]));
     } else {
       invoke<SlashCommand[]>("search_slash_commands", { query: nameFragment })
         .then((cmds) => {
           setSlashCommands(cmds);
-          setSelectedSlashIndex(0);
+          setSelectedSlashIndex(-1);
         })
         .catch(() => setSlashCommands([]));
     }
   }, [query, isSlashMode, paramEntryMode]);
+
+  // Preload slash command params while browsing the command list to enable inline intellisense.
+  useEffect(() => {
+    if (!isSlashMode || paramEntryMode || slashCommands.length === 0) return;
+
+    const missing = slashCommands.filter(
+      (cmd) => !Object.prototype.hasOwnProperty.call(slashCommandParamsByName, cmd.name),
+    );
+    if (missing.length === 0) return;
+
+    let cancelled = false;
+
+    Promise.all(
+      missing.map(async (cmd) => {
+        try {
+          const params = await invoke<SlashCommandParam[]>("get_slash_command_params", {
+            name: cmd.name,
+          });
+          return [cmd.name, params] as const;
+        } catch {
+          return [cmd.name, [] as SlashCommandParam[]] as const;
+        }
+      }),
+    ).then((entries) => {
+      if (cancelled) return;
+      setSlashCommandParamsByName((prev) => {
+        const next = { ...prev };
+        let changed = false;
+        for (const [name, params] of entries) {
+          if (!Object.prototype.hasOwnProperty.call(next, name)) {
+            next[name] = params;
+            changed = true;
+          }
+        }
+        return changed ? next : prev;
+      });
+    });
+
+    return () => {
+      cancelled = true;
+    };
+  }, [isSlashMode, paramEntryMode, slashCommands, slashCommandParamsByName]);
 
   // Exit param entry mode if user backspaces past the space
   useEffect(() => {
@@ -298,28 +343,6 @@ export function useLauncher(options: UseLauncherOptions) {
     [previewSuggestion],
   );
 
-  const saveCommandFromSuggestion = useCallback(
-    async (suggestion: CommandSuggestion) => {
-      setSavingCommand(true);
-      try {
-        await invoke("add_item_from_suggestion", {
-          title: suggestion.suggested_command,
-          actionValue: suggestion.suggested_command,
-          actionType: "command",
-          category: null,
-        });
-        await fetchItems(query);
-        fetchCategories();
-        setSuggestions([]);
-      } catch (err) {
-        console.error("Failed to save command:", err);
-      } finally {
-        setSavingCommand(false);
-      }
-    },
-    [query, fetchItems, fetchCategories],
-  );
-
   const executeSelected = useCallback(async () => {
     const item = filteredItems[selectedIndex];
     if (!item) return;
@@ -358,23 +381,44 @@ export function useLauncher(options: UseLauncherOptions) {
             if (hasArgs) {
               // User typed "/kill 4924" — execute directly
               executeSlashCommand(parsed.name, parsed.args);
-            } else if (slashCommands.length > 0) {
-              // User pressed Enter on a slash command from the list — enter param entry mode
-              const selected = slashCommands[selectedSlashIndex];
-              if (selected) {
-                setQueryState(`/${selected.name} `);
-                setActiveCommandName(selected.name);
+            } else {
+              const selectedFromList =
+                selectedSlashIndex >= 0 ? slashCommands[selectedSlashIndex] : undefined;
+              const exactMatch = slashCommands.find((cmd) => cmd.name === parsed.name);
+              const commandToEnter = selectedFromList ?? exactMatch;
+
+              // Enter on an explicitly selected command (or exact name match) enters param mode.
+              if (commandToEnter) {
+                setQueryState(`/${commandToEnter.name} `);
+                setActiveCommandName(commandToEnter.name);
                 setParamEntryMode(true);
                 setCurrentParamIndex(0);
-                // Fetch params for this command
-                invoke<SlashCommandParam[]>("get_slash_command_params", { name: selected.name })
-                  .then((params) => setActiveCommandParams(params))
-                  .catch(() => setActiveCommandParams([]));
+                // Fetch params for this command (or reuse prefetched values).
+                if (
+                  Object.prototype.hasOwnProperty.call(
+                    slashCommandParamsByName,
+                    commandToEnter.name,
+                  )
+                ) {
+                  setActiveCommandParams(slashCommandParamsByName[commandToEnter.name]);
+                } else {
+                  invoke<SlashCommandParam[]>("get_slash_command_params", {
+                    name: commandToEnter.name,
+                  })
+                    .then((params) => {
+                      setActiveCommandParams(params);
+                      setSlashCommandParamsByName((prev) => ({
+                        ...prev,
+                        [commandToEnter.name]: params,
+                      }));
+                    })
+                    .catch(() => setActiveCommandParams([]));
+                }
+              } else if (slashCommands.length === 0) {
+                // No matching slash command — send to slash command agent for creation
+                options.onSlashCommandCreate(query);
+                setQueryState("");
               }
-            } else {
-              // No matching slash command — send to slash command agent for creation
-              options.onSlashCommandCreate(query);
-              setQueryState("");
             }
           }
         }
@@ -390,11 +434,15 @@ export function useLauncher(options: UseLauncherOptions) {
       ) {
         e.preventDefault();
         if (e.key === "ArrowDown") {
-          setSelectedSlashIndex((prev) =>
-            Math.min(prev + 1, slashCommands.length - 1),
-          );
+          setSelectedSlashIndex((prev) => {
+            if (prev < 0) return 0;
+            return Math.min(prev + 1, slashCommands.length - 1);
+          });
         } else {
-          setSelectedSlashIndex((prev) => Math.max(prev - 1, 0));
+          setSelectedSlashIndex((prev) => {
+            if (prev < 0) return slashCommands.length - 1;
+            return Math.max(prev - 1, 0);
+          });
         }
         return;
       }
@@ -403,17 +451,6 @@ export function useLauncher(options: UseLauncherOptions) {
       if (options.agentTurnActive && e.key === "Escape") {
         e.preventDefault();
         options.onAgentCancel();
-        return;
-      }
-
-      // Ctrl+S saves the top suggestion as a command
-      if (
-        suggestions.length > 0 &&
-        e.key === "s" &&
-        (e.ctrlKey || e.metaKey)
-      ) {
-        e.preventDefault();
-        saveCommandFromSuggestion(suggestions[0]);
         return;
       }
 
@@ -535,13 +572,13 @@ export function useLauncher(options: UseLauncherOptions) {
       agentModeReady,
       options,
       suggestions,
-      saveCommandFromSuggestion,
       selectedSuggestionIndex,
       previewSuggestion,
       restoreQueryFromSuggestionPreview,
       setQuery,
       isSlashMode,
       slashCommands,
+      slashCommandParamsByName,
       selectedSlashIndex,
       parseSlashInput,
       executeSlashCommand,
@@ -561,7 +598,8 @@ export function useLauncher(options: UseLauncherOptions) {
     setActiveCategory(null);
     setSuggestions([]);
     setSlashCommands([]);
-    setSelectedSlashIndex(0);
+    setSlashCommandParamsByName({});
+    setSelectedSlashIndex(-1);
     setAgentModeConfirmed(false);
     setParamEntryMode(false);
     setCurrentParamIndex(0);
@@ -590,12 +628,11 @@ export function useLauncher(options: UseLauncherOptions) {
     selectSuggestion,
     focusInputSignal,
     handleInputFocus,
-    savingCommand,
-    saveCommandFromSuggestion,
     refresh,
     reset,
     isSlashMode,
     slashCommands,
+    slashCommandParamsByName,
     selectedSlashIndex,
     setSelectedSlashIndex,
     executeSlashCommand,
