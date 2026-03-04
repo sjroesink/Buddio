@@ -99,8 +99,8 @@ fn check_npm_package_installed(package: &str) -> bool {
     };
 
     #[cfg(target_os = "windows")]
-    let result = std::process::Command::new("cmd")
-        .args(["/C", "npm", "list", "-g", "--depth=0"])
+    let result = std::process::Command::new("powershell")
+        .args(["-NoProfile", "-Command", "npm list -g --depth=0"])
         .stdout(std::process::Stdio::piped())
         .stderr(std::process::Stdio::null())
         .output();

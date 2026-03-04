@@ -557,8 +557,8 @@ pub async fn acp_install_agent(agent: RegistryAgent) -> Result<String, String> {
             let package = agent.distribution_detail.clone();
             tokio::task::spawn_blocking(move || {
                 #[cfg(target_os = "windows")]
-                let output = std::process::Command::new("cmd")
-                    .args(["/C", "npm", "install", "-g", &package])
+                let output = std::process::Command::new("powershell")
+                    .args(["-NoProfile", "-Command", &format!("npm install -g {}", package)])
                     .output()
                     .map_err(|e| format!("Failed to run npm install: {e}"))?;
 

@@ -91,13 +91,15 @@ impl AcpManager {
         let resolved_binary = resolve_binary_path(&binary, &config.agent_id);
 
         // On Windows, commands like "npx" are actually .cmd batch scripts
-        // that cannot be spawned directly. We need to run them through cmd.exe.
+        // that cannot be spawned directly. We run them through PowerShell.
         #[cfg(target_os = "windows")]
         let mut cmd = {
-            let mut c = tokio::process::Command::new("cmd");
-            let mut cmd_args = vec!["/C".to_string(), resolved_binary.clone()];
-            cmd_args.extend(args.clone());
-            c.args(&cmd_args);
+            let mut c = tokio::process::Command::new("powershell");
+            let invoke = std::iter::once(format!("& '{}'", resolved_binary))
+                .chain(args.iter().map(|a| format!("'{}'", a.replace('\'', "''"))))
+                .collect::<Vec<_>>()
+                .join(" ");
+            c.args(["-NoProfile", "-Command", &invoke]);
             c
         };
         #[cfg(not(target_os = "windows"))]
@@ -840,7 +842,10 @@ fn build_agent_prompt(
          - `items_export` — Export all items as JSON\n\
          Action types: `command` (shell), `url` (browser), `script` (script file)\n\n\
          ### Command Execution Details\n\
-         Commands (action_type `command` or `script`) are executed via `powershell -NoProfile -Command \"<action_value>\"` on Windows.\n\
+         CRITICAL: Buddio ALWAYS uses PowerShell on Windows — NEVER cmd.exe. \
+         Do NOT mention cmd, cmd.exe, or Command Prompt in your responses. \
+         ALL commands are executed via `powershell -NoProfile -Command \"<action_value>\"`. \
+         If a command fails, the issue is PowerShell syntax — never blame cmd.\n\n\
          This means `action_value` MUST be valid PowerShell syntax. Important rules:\n\
          - Do NOT use `start powershell -NoExit ...` — `start` is an alias for `Start-Process` in PowerShell \
            and `Start-Process` does NOT have a `-NoExit` parameter.\n\
@@ -849,7 +854,8 @@ fn build_agent_prompt(
          - For fire-and-forget background commands (no window needed), just write the command directly:\n\
            `Set-Location \"path\"; docker compose up -d`\n\
          - Use single quotes for literal strings containing paths. Use Set-Location instead of cd when needed.\n\
-         - Commands are spawned asynchronously (fire-and-forget) — the launcher does not wait for them to finish.\n\n\
+         - Commands are spawned asynchronously (fire-and-forget) — the launcher does not wait for them to finish.\n\
+         - When debugging command failures, always analyze the error as a PowerShell error.\n\n\
          ### Memory\n\
          - `memory_add` — Add or update a memory (key, value, memory_type: preference/pattern/fact, context, confidence)\n\
          - `memory_get` — Get memory by ID\n\
