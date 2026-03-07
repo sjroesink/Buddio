@@ -67,6 +67,7 @@ const NAV_ITEMS: { id: SettingsTab; label: string; icon: string }[] = [
 
 interface AgentSettingsProps {
   status: AgentStatus;
+  errorMessage: string | null;
   configOptions: SessionConfigOptionInfo[];
   onConnect: (config: AgentConfig) => void;
   onDisconnect: () => void;
@@ -76,6 +77,7 @@ interface AgentSettingsProps {
 
 export function AgentSettings({
   status,
+  errorMessage,
   configOptions,
   onConnect,
   onDisconnect,
@@ -97,21 +99,30 @@ export function AgentSettings({
   const [shortcutMode, setShortcutMode] = useState("Ctrl+Space");
   const [isRecording, setIsRecording] = useState(false);
   const [recordingKeys, setRecordingKeys] = useState("");
+  const [autoUpdate, setAutoUpdate] = useState(false);
+  const [updateStatus, setUpdateStatus] = useState<
+    "idle" | "checking" | "available" | "up-to-date" | "installing" | "error"
+  >("idle");
+  const [updateVersion, setUpdateVersion] = useState<string | null>(null);
+  const [updateError, setUpdateError] = useState<string | null>(null);
   const recorderRef = useRef<HTMLDivElement>(null);
 
   // Load saved config, fetch registry, check installs
   useEffect(() => {
     async function init() {
       try {
-        const mode = await invoke<string>("get_shortcut_mode");
-        setShortcutMode(mode);
+        // Fire independent local calls and the network call in parallel
+        const [mode, autoUpdateVal, config, registryAgents] = await Promise.all([
+          invoke<string>("get_shortcut_mode"),
+          invoke<string | null>("get_setting", { key: "app.auto_update" }),
+          invoke<AgentConfig>("get_agent_config"),
+          invoke<RegistryAgent[]>("acp_fetch_registry"),
+        ]);
 
-        const config = await invoke<AgentConfig>("get_agent_config");
+        setShortcutMode(mode);
+        setAutoUpdate(autoUpdateVal === "true");
         setSelectedAgentId(config.agent_id);
         setAutoFallback(config.auto_fallback);
-
-        const registryAgents =
-          await invoke<RegistryAgent[]>("acp_fetch_registry");
         setAgents(registryAgents);
 
         const installed = await invoke<Record<string, boolean>>(
@@ -119,25 +130,6 @@ export function AgentSettings({
           { agents: registryAgents },
         );
         setInstallStatus(installed);
-
-        const envMap: Record<string, Record<string, string>> = {};
-        for (const agent of registryAgents) {
-          if (agent.required_env.length > 0) {
-            try {
-              const pairs = await invoke<[string, string][]>("get_agent_env", {
-                agentId: agent.id,
-              });
-              const values: Record<string, string> = {};
-              for (const [name, value] of pairs) {
-                values[name] = value;
-              }
-              envMap[agent.id] = values;
-            } catch {
-              envMap[agent.id] = {};
-            }
-          }
-        }
-        setAgentEnvValues(envMap);
       } catch (e) {
         console.error("Failed to initialize agent settings:", e);
       }
@@ -145,6 +137,28 @@ export function AgentSettings({
     }
     init();
   }, []);
+
+  // Lazy-load env vars when an agent with required_env is selected
+  useEffect(() => {
+    const agent = agents.find((a) => a.id === selectedAgentId);
+    if (!agent || agent.required_env.length === 0) return;
+    if (agentEnvValues[agent.id]) return; // already loaded
+
+    (async () => {
+      try {
+        const pairs = await invoke<[string, string][]>("get_agent_env", {
+          agentId: agent.id,
+        });
+        const values: Record<string, string> = {};
+        for (const [name, value] of pairs) {
+          values[name] = value;
+        }
+        setAgentEnvValues((prev) => ({ ...prev, [agent.id]: values }));
+      } catch {
+        setAgentEnvValues((prev) => ({ ...prev, [agent.id]: {} }));
+      }
+    })();
+  }, [selectedAgentId, agents, agentEnvValues]);
 
   // Escape to close (unless recording a hotkey)
   useEffect(() => {
@@ -326,6 +340,48 @@ export function AgentSettings({
     onConnect(config);
   }
 
+  async function handleAutoUpdateToggle(enabled: boolean) {
+    setAutoUpdate(enabled);
+    try {
+      await invoke("set_setting", {
+        key: "app.auto_update",
+        value: enabled ? "true" : "false",
+      });
+    } catch (e) {
+      console.error("Failed to save auto_update setting:", e);
+    }
+  }
+
+  async function handleCheckForUpdate() {
+    setUpdateStatus("checking");
+    setUpdateError(null);
+    try {
+      const result = await invoke<{ version: string; body: string | null } | null>(
+        "check_for_update",
+      );
+      if (result) {
+        setUpdateStatus("available");
+        setUpdateVersion(result.version);
+      } else {
+        setUpdateStatus("up-to-date");
+      }
+    } catch (e) {
+      setUpdateStatus("error");
+      setUpdateError(String(e));
+    }
+  }
+
+  async function handleInstallUpdate() {
+    setUpdateStatus("installing");
+    setUpdateError(null);
+    try {
+      await invoke("install_update");
+    } catch (e) {
+      setUpdateStatus("error");
+      setUpdateError(String(e));
+    }
+  }
+
   const selectedAgent = agents.find((a) => a.id === selectedAgentId);
   const canConnect =
     selectedAgent && installStatus[selectedAgentId] !== false;
@@ -382,6 +438,50 @@ export function AgentSettings({
         {shortcutError && (
           <div className="text-[11px] text-red-400 mt-1.5 px-1">
             Failed to register shortcut: {shortcutError}
+          </div>
+        )}
+
+        <div className="settings-section-title mt-4">Auto Update</div>
+        <div className="flex items-center justify-between px-1 py-1.5">
+          <label className="settings-label flex items-center gap-2 cursor-pointer">
+            <input
+              type="checkbox"
+              checked={autoUpdate}
+              onChange={(e) => handleAutoUpdateToggle(e.target.checked)}
+            />
+            Check for updates on startup
+          </label>
+          <button
+            className="settings-btn settings-btn-primary text-xs px-3 py-1"
+            onClick={handleCheckForUpdate}
+            disabled={updateStatus === "checking" || updateStatus === "installing"}
+          >
+            {updateStatus === "checking" ? "Checking..." : "Check now"}
+          </button>
+        </div>
+        {(updateStatus === "available" || updateStatus === "installing") &&
+          updateVersion && (
+          <div className="flex items-center gap-2 px-1 mt-1">
+            <span className="text-[11px] text-green-400">
+              v{updateVersion} available
+            </span>
+            <button
+              className="settings-btn settings-btn-primary text-xs px-3 py-1"
+              onClick={handleInstallUpdate}
+              disabled={updateStatus === "installing"}
+            >
+              {updateStatus === "installing" ? "Installing..." : "Update"}
+            </button>
+          </div>
+        )}
+        {updateStatus === "up-to-date" && (
+          <div className="text-[11px] text-white/50 px-1 mt-1">
+            You're on the latest version.
+          </div>
+        )}
+        {updateStatus === "error" && updateError && (
+          <div className="text-[11px] text-red-400 px-1 mt-1">
+            {updateError}
           </div>
         )}
       </div>
@@ -581,17 +681,29 @@ export function AgentSettings({
               >
                 Disconnect
               </button>
+            ) : status === "connecting" ? (
+              <button
+                className="settings-btn settings-btn-danger"
+                onClick={onDisconnect}
+              >
+                Cancel
+              </button>
             ) : (
               <button
                 className="settings-btn settings-btn-primary"
                 onClick={handleConnect}
-                disabled={status === "connecting" || !canConnect}
+                disabled={!canConnect}
               >
-                {status === "connecting" ? "Connecting..." : "Connect"}
+                Connect
               </button>
             )}
-            <span className={`settings-status settings-status-${status}`}>
-              {status}
+            <span
+              className={`settings-status settings-status-${status}`}
+              title={status === "error" && errorMessage ? errorMessage : undefined}
+            >
+              {status === "error" && errorMessage
+                ? `Error: ${errorMessage}`
+                : status}
             </span>
           </div>
         </div>
@@ -600,45 +712,43 @@ export function AgentSettings({
   }
 
   return (
-    <div className="agent-settings-overlay">
-      <div className="agent-settings-panel">
-        <div className="settings-header">
-          <h3>Settings</h3>
-          <button className="settings-close-btn" onClick={onClose}>
-            &#x2715;
-          </button>
-        </div>
+    <div className="agent-settings-panel">
+      <div className="settings-header" data-tauri-drag-region>
+        <h3>Settings</h3>
+        <button className="settings-close-btn" onClick={onClose}>
+          &#x2715;
+        </button>
+      </div>
 
-        <div className="settings-layout">
-          {/* Sidebar navigation */}
-          <nav className="settings-nav">
-            {NAV_ITEMS.map((item) => (
-              <button
-                key={item.id}
-                className={`settings-nav-item ${activeTab === item.id ? "settings-nav-item-active" : ""}`}
-                onClick={() => setActiveTab(item.id)}
+      <div className="settings-layout">
+        {/* Sidebar navigation */}
+        <nav className="settings-nav">
+          {NAV_ITEMS.map((item) => (
+            <button
+              key={item.id}
+              className={`settings-nav-item ${activeTab === item.id ? "settings-nav-item-active" : ""}`}
+              onClick={() => setActiveTab(item.id)}
+            >
+              <svg
+                className="settings-nav-icon"
+                viewBox="0 0 24 24"
+                fill="none"
+                stroke="currentColor"
+                strokeWidth="1.5"
+                strokeLinecap="round"
+                strokeLinejoin="round"
               >
-                <svg
-                  className="settings-nav-icon"
-                  viewBox="0 0 24 24"
-                  fill="none"
-                  stroke="currentColor"
-                  strokeWidth="1.5"
-                  strokeLinecap="round"
-                  strokeLinejoin="round"
-                >
-                  <path d={item.icon} />
-                </svg>
-                <span>{item.label}</span>
-              </button>
-            ))}
-          </nav>
+                <path d={item.icon} />
+              </svg>
+              <span>{item.label}</span>
+            </button>
+          ))}
+        </nav>
 
-          {/* Content area */}
-          <div className="settings-content">
-            {activeTab === "general" && renderGeneralSection()}
-            {activeTab === "agent" && renderAgentSection()}
-          </div>
+        {/* Content area */}
+        <div className="settings-content">
+          {activeTab === "general" && renderGeneralSection()}
+          {activeTab === "agent" && renderAgentSection()}
         </div>
       </div>
     </div>

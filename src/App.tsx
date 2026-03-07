@@ -9,7 +9,7 @@ import CategoryBar from "./components/CategoryBar";
 import ItemList from "./components/ItemList";
 import StatusBar from "./components/StatusBar";
 import { AgentResponse } from "./components/AgentResponse";
-import { AgentSettings } from "./components/AgentSettings";
+import { WebviewWindow } from "@tauri-apps/api/webviewWindow";
 import CommandSuggestionPanel from "./components/CommandSuggestionPanel";
 import SlashCommandList from "./components/SlashCommandList";
 import ParameterHint from "./components/ParameterHint";
@@ -18,10 +18,9 @@ import { RewriteQuickActions } from "./components/RewriteQuickActions";
 import { CommandOutput } from "./components/CommandOutput";
 import { ContextPanel } from "./components/ContextPanel";
 import { Toast, type ToastData } from "./components/Toast";
-import type { AgentConfig } from "./types";
+
 
 function App() {
-  const [settingsOpen, setSettingsOpen] = useState(false);
   const [autoFallback, setAutoFallback] = useState(false);
   const [showHistory, setShowHistory] = useState(false);
   const [forceAgentMode, setForceAgentMode] = useState(false);
@@ -77,8 +76,56 @@ function App() {
       .catch(() => {});
   }, []);
 
+  // Check for updates on startup if enabled
+  useEffect(() => {
+    invoke<string | null>("get_setting", { key: "app.auto_update" })
+      .then(async (val) => {
+        if (val !== "true") return;
+        try {
+          const result = await invoke<{ version: string; body: string | null } | null>(
+            "check_for_update",
+          );
+          if (result) {
+            setToast({
+              message: `Update v${result.version} available`,
+              type: "info",
+              action: {
+                label: "Update",
+                onClick: () => {
+                  invoke("install_update").catch((e) =>
+                    setToast({ message: String(e), type: "error" }),
+                  );
+                },
+              },
+            });
+          }
+        } catch {
+          // Silently ignore update check failures on startup
+        }
+      })
+      .catch(() => {});
+  }, []);
+
   useEffect(() => {
     containerRef.current?.focus();
+  }, []);
+
+  const openSettings = useCallback(async () => {
+    const existing = await WebviewWindow.getByLabel("settings");
+    if (existing) {
+      await existing.setFocus();
+      return;
+    }
+    new WebviewWindow("settings", {
+      url: "settings.html",
+      title: "Buddio Settings",
+      width: 640,
+      height: 480,
+      center: true,
+      resizable: false,
+      decorations: false,
+      transparent: true,
+    });
   }, []);
 
   // Ctrl+, for settings
@@ -86,18 +133,17 @@ function App() {
     function handleGlobalKey(e: KeyboardEvent) {
       if (e.key === "," && (e.ctrlKey || e.metaKey)) {
         e.preventDefault();
-        setSettingsOpen((prev) => !prev);
+        openSettings();
       }
     }
     window.addEventListener("keydown", handleGlobalKey);
     return () => window.removeEventListener("keydown", handleGlobalKey);
-  }, []);
+  }, [openSettings]);
 
   // Reset all state when the window is closed/hidden
   useEffect(() => {
     const unlisten = listen("launcher-reset", () => {
       launcher.reset();
-      setSettingsOpen(false);
       setShowHistory(false);
       setForceAgentMode(false);
       setHistorySelectedIndex(0);
@@ -121,12 +167,12 @@ function App() {
   // Open settings on backend event (e.g. tray menu action)
   useEffect(() => {
     const unlisten = listen("open-settings", () => {
-      setSettingsOpen(true);
+      openSettings();
     });
     return () => {
       unlisten.then((fn) => fn());
     };
-  }, []);
+  }, [openSettings]);
 
   // Detect clipboard images when the window gains focus
   useEffect(() => {
@@ -191,13 +237,6 @@ function App() {
     (launchCtx.hasClipboard ? 1 : 0) +
     pastedImages.length;
 
-  const handleConnect = useCallback(
-    async (config: AgentConfig) => {
-      setAutoFallback(config.auto_fallback);
-      await agent.connect(config);
-    },
-    [agent],
-  );
 
   const handleShowHistory = useCallback(() => {
     setShowHistory(true);
@@ -311,15 +350,23 @@ function App() {
     !contextPanelOpen;
   const windowAnchor = isAgentInputMode ? "bottom" : "top";
   const isAgentInputModeRef = useRef(isAgentInputMode);
+  const queryRef = useRef(launcher.query);
 
   useEffect(() => {
     isAgentInputModeRef.current = isAgentInputMode;
   }, [isAgentInputMode]);
 
-  // Hide launcher on blur only in search mode (not in agent mode)
+  useEffect(() => {
+    queryRef.current = launcher.query;
+  }, [launcher.query]);
+
+  // Hide launcher on blur only when the search input is shown and empty
   useEffect(() => {
     const unlisten = listen("tauri://blur", () => {
-      if (!isAgentInputModeRef.current) {
+      if (
+        !isAgentInputModeRef.current &&
+        !queryRef.current.trim()
+      ) {
         invoke("hide_window").catch(() => {});
       }
     });
@@ -330,10 +377,10 @@ function App() {
 
   useEffect(() => {
     invoke("set_window_compact", {
-      compact: showOnlySearch && !settingsOpen,
+      compact: showOnlySearch,
       anchor: windowAnchor,
     }).catch(() => {});
-  }, [showOnlySearch, settingsOpen, windowAnchor]);
+  }, [showOnlySearch, windowAnchor]);
 
   // Refresh search results when agent turn ends (agent may have added/removed items)
   const prevTurnActiveRef = useRef(false);
@@ -537,7 +584,7 @@ function App() {
             onQueryChange={launcher.setQuery}
             loading={false}
             agentStatus={agent.status}
-            onSettingsClick={() => setSettingsOpen(true)}
+            onSettingsClick={openSettings}
             onBackClick={exitAgentMode}
             mode="composer"
             position="bottom"
@@ -565,7 +612,7 @@ function App() {
             focusSignal={launcher.focusInputSignal}
             loading={launcher.loading}
             agentStatus={agent.status}
-            onSettingsClick={() => setSettingsOpen(true)}
+            onSettingsClick={openSettings}
             onAgentClick={enterAgentMode}
             mode="search"
             position="top"
@@ -636,17 +683,6 @@ function App() {
             </>
           )}
         </>
-      )}
-
-      {settingsOpen && (
-        <AgentSettings
-          status={agent.status}
-          configOptions={agent.configOptions}
-          onConnect={handleConnect}
-          onDisconnect={agent.disconnect}
-          onClose={() => setSettingsOpen(false)}
-          onSetConfigOption={agent.setConfigOption}
-        />
       )}
 
       {toast && (

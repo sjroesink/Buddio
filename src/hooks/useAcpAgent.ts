@@ -66,6 +66,7 @@ function normalizeToolStatus(
 
 export function useAcpAgent() {
   const [status, setStatus] = useState<AgentStatus>("disconnected");
+  const [errorMessage, setErrorMessage] = useState<string | null>(null);
   const [messages, setMessages] = useState("");
   const [thread, setThread] = useState<AgentThreadMessage[]>([]);
   const [thoughts, setThoughts] = useState("");
@@ -210,6 +211,7 @@ export function useAcpAgent() {
         }
         case "status_change":
           setStatus(update.status);
+          if (update.status !== "error") setErrorMessage(null);
           break;
       }
     });
@@ -253,6 +255,7 @@ export function useAcpAgent() {
   const connect = useCallback(async (config: AgentConfig) => {
     try {
       setStatus("connecting");
+      setErrorMessage(null);
       await invoke("acp_connect", { config });
       // Fetch initial config options after connect
       const opts = await invoke<SessionConfigOptionInfo[]>(
@@ -262,6 +265,7 @@ export function useAcpAgent() {
     } catch (e) {
       console.error("Failed to connect agent:", e);
       setStatus("error");
+      setErrorMessage(String(e));
     }
   }, []);
 
@@ -317,6 +321,7 @@ export function useAcpAgent() {
       } catch (e) {
         console.error("Failed to restore agent connection on startup:", e);
         setStatus("error");
+        setErrorMessage(String(e));
       }
     }
 
@@ -326,18 +331,19 @@ export function useAcpAgent() {
   const disconnect = useCallback(async () => {
     try {
       await invoke("acp_disconnect");
-      setStatus("disconnected");
-      setThread([]);
-      setMessages("");
-      setThoughts("");
-      setTurnActive(false);
-      setIsThinking(false);
-      setActiveConversationId(null);
-      setConfigOptions([]);
-      activeAssistantIdRef.current = null;
     } catch (e) {
       console.error("Failed to disconnect agent:", e);
     }
+    setStatus("disconnected");
+    setErrorMessage(null);
+    setThread([]);
+    setMessages("");
+    setThoughts("");
+    setTurnActive(false);
+    setIsThinking(false);
+    setActiveConversationId(null);
+    setConfigOptions([]);
+    activeAssistantIdRef.current = null;
   }, []);
 
   const startTurn = useCallback(
@@ -575,6 +581,7 @@ export function useAcpAgent() {
 
   return {
     status,
+    errorMessage,
     messages,
     thread,
     thoughts,

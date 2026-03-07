@@ -447,25 +447,19 @@ body,
   color: rgba(248, 113, 113, 0.9);
 }
 
-/* Agent settings overlay */
-.agent-settings-overlay {
-  position: absolute;
-  inset: 0;
-  background: rgba(0, 0, 0, 0.6);
+/* Settings window */
+.settings-window {
+  height: 100vh;
   display: flex;
-  align-items: center;
-  justify-content: center;
-  padding: 20px;
-  z-index: 50;
+  flex-direction: column;
 }
 
 .agent-settings-panel {
   background: rgba(30, 30, 40, 0.98);
   border: 1px solid rgba(255, 255, 255, 0.1);
   border-radius: 12px;
-  width: min(94vw, 640px);
-  height: min(90vh, 560px);
-  max-height: min(90vh, 560px);
+  width: 100%;
+  height: 100%;
   display: flex;
   flex-direction: column;
   overflow: hidden;
@@ -1150,8 +1144,12 @@ a,
   animation: toast-in 0.2s ease-out;
 }
 
-.agent-settings-overlay,
-.agent-settings-overlay * {
+.settings-window,
+.settings-window * {
   -webkit-app-region: no-drag;
+}
+
+.settings-window [data-tauri-drag-region] {
+  -webkit-app-region: drag;
 }
 
