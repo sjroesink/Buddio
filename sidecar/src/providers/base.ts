@@ -22,4 +22,5 @@ export interface SidecarProvider {
   init(config: ProviderConfig, tools: McpTool[], send: SendFn): Promise<void>;
   prompt(text: string, callTool: (name: string, args: Record<string, unknown>) => Promise<McpToolResult>): Promise<void>;
   cancel(): void;
+  resolveReplacement?(requestId: string, success: boolean): void;
 }
