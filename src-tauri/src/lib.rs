@@ -1,4 +1,4 @@
-mod acp;
+mod agent;
 mod commands;
 mod context;
 pub mod hotkey;
@@ -20,7 +20,7 @@ fn is_test_mode() -> bool {
         .is_ok_and(|v| v == "1")
 }
 
-use acp::manager::AcpManager;
+use agent::manager::AgentManager;
 
 /// Shared state holding the most recent launch context.
 pub struct LaunchContextState(pub StdMutex<LaunchContext>);
@@ -55,15 +55,15 @@ pub fn run() {
             set_setting,
             get_agent_config,
             save_agent_config,
-            acp_connect,
-            acp_disconnect,
-            acp_get_status,
-            acp_prompt,
-            acp_prompt_slash_command,
-            acp_cancel,
-            acp_resolve_permission,
-            acp_get_config_options,
-            acp_set_config_option,
+            agent_connect,
+            agent_disconnect,
+            agent_get_status,
+            agent_prompt,
+            agent_prompt_slash_command,
+            agent_cancel,
+            agent_resolve_permission,
+            agent_get_config_options,
+            agent_set_config_option,
             acp_fetch_registry,
             acp_check_agents_installed,
             acp_install_agent,
@@ -103,8 +103,8 @@ pub fn run() {
         .setup(|app| {
             let handle = app.handle().clone();
 
-            // Initialize ACP manager state
-            app.manage(AcpState(Arc::new(Mutex::new(AcpManager::new()))));
+            // Initialize agent manager state
+            app.manage(AgentState(Arc::new(Mutex::new(AgentManager::new()))));
 
             // Initialize launch context state
             app.manage(LaunchContextState(StdMutex::new(LaunchContext::default())));

@@ -84,13 +84,18 @@ export interface RegistryAgent {
   required_env: RequiredEnvVar[];
 }
 
+export type ProviderKind = "acp" | "claude" | "copilot";
+
 export interface AgentConfig {
+  provider: ProviderKind;
   source: string;
   agent_id: string;
   binary_path: string;
   args: string;
   env: string;
   auto_fallback: boolean;
+  api_key: string;
+  model: string;
 }
 
 // --- Launch context types ---

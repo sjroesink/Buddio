@@ -90,12 +90,18 @@ pub struct PermissionOptionInfo {
 
 #[derive(Debug, Clone, Serialize, Deserialize, Default)]
 pub struct AgentConfig {
+    #[serde(default)]
+    pub provider: String,
     pub source: String,
     pub agent_id: String,
     pub binary_path: String,
     pub args: String,
     pub env: String,
     pub auto_fallback: bool,
+    #[serde(default)]
+    pub api_key: String,
+    #[serde(default)]
+    pub model: String,
 }
 
 // --- Session Config Option types (serializable mirror of ACP protocol types) ---

@@ -10,14 +10,14 @@ use tauri::{AppHandle, Emitter, LogicalSize, Manager, PhysicalPosition, Position
 use tauri_plugin_updater::UpdaterExt;
 use tokio::sync::Mutex;
 
-use crate::acp::manager::AcpManager;
-use crate::acp::registry::{check_agents_installed, fetch_registry};
-use crate::acp::types::{AgentConfig, AgentStatus, RegistryAgent, SessionConfigOptionInfo};
+use crate::agent::manager::AgentManager;
+use crate::agent::registry::{check_agents_installed, fetch_registry};
+use crate::agent::types::{AgentConfig, AgentStatus, RegistryAgent, SessionConfigOptionInfo};
 use crate::context::LaunchContext;
 use crate::hotkey;
 use crate::{HotkeyState, LaunchContextState};
 
-pub struct AcpState(pub Arc<Mutex<AcpManager>>);
+pub struct AgentState(pub Arc<Mutex<AgentManager>>);
 
 // --- Existing item commands ---
 
@@ -232,11 +232,18 @@ pub fn save_agent_config(config: AgentConfig) -> Result<(), String> {
             "false"
         },
     )?;
+    // New provider fields
+    db.set_setting("agent.provider", &config.provider)?;
+    db.set_setting("agent.claude.api_key", &config.api_key)?;
+    db.set_setting("agent.claude.model", &config.model)?;
     Ok(())
 }
 
 fn load_agent_config(db: &Database) -> Result<AgentConfig, String> {
     Ok(AgentConfig {
+        provider: db
+            .get_setting("agent.provider")?
+            .unwrap_or_else(|| "acp".to_string()),
         source: db.get_setting("acp.source")?.unwrap_or_default(),
         agent_id: db.get_setting("acp.agent_id")?.unwrap_or_default(),
         binary_path: db.get_setting("acp.binary_path")?.unwrap_or_default(),
@@ -246,6 +253,12 @@ fn load_agent_config(db: &Database) -> Result<AgentConfig, String> {
             .get_setting("acp.auto_fallback")?
             .map(|v| v == "true")
             .unwrap_or(false),
+        api_key: db
+            .get_setting("agent.claude.api_key")?
+            .unwrap_or_default(),
+        model: db
+            .get_setting("agent.claude.model")?
+            .unwrap_or_default(),
     })
 }
 
@@ -386,12 +399,12 @@ pub fn delete_conversation(id: String) -> Result<bool, String> {
     db.delete_conversation(&id)
 }
 
-// --- ACP lifecycle commands ---
+// --- Agent lifecycle commands ---
 
 #[tauri::command]
-pub async fn acp_connect(
+pub async fn agent_connect(
     app: AppHandle,
-    state: tauri::State<'_, AcpState>,
+    state: tauri::State<'_, AgentState>,
     config: AgentConfig,
 ) -> Result<(), String> {
     let mut manager = state.inner().0.lock().await;
@@ -399,22 +412,22 @@ pub async fn acp_connect(
 }
 
 #[tauri::command]
-pub async fn acp_disconnect(state: tauri::State<'_, AcpState>) -> Result<(), String> {
+pub async fn agent_disconnect(state: tauri::State<'_, AgentState>) -> Result<(), String> {
     let mut manager = state.inner().0.lock().await;
     manager.disconnect().await
 }
 
 #[tauri::command]
-pub async fn acp_get_status(state: tauri::State<'_, AcpState>) -> Result<AgentStatus, String> {
+pub async fn agent_get_status(state: tauri::State<'_, AgentState>) -> Result<AgentStatus, String> {
     let manager = state.inner().0.lock().await;
     Ok(manager.status())
 }
 
-// --- ACP prompting commands ---
+// --- Agent prompting commands ---
 
 #[tauri::command]
-pub async fn acp_prompt(
-    state: tauri::State<'_, AcpState>,
+pub async fn agent_prompt(
+    state: tauri::State<'_, AgentState>,
     context_state: tauri::State<'_, LaunchContextState>,
     query: String,
     context_items: Vec<Item>,
@@ -480,8 +493,8 @@ pub async fn acp_prompt(
 }
 
 #[tauri::command]
-pub async fn acp_prompt_slash_command(
-    state: tauri::State<'_, AcpState>,
+pub async fn agent_prompt_slash_command(
+    state: tauri::State<'_, AgentState>,
     query: String,
 ) -> Result<(), String> {
     let db = Database::new()?;
@@ -496,16 +509,16 @@ pub async fn acp_prompt_slash_command(
 }
 
 #[tauri::command]
-pub async fn acp_cancel(state: tauri::State<'_, AcpState>) -> Result<(), String> {
+pub async fn agent_cancel(state: tauri::State<'_, AgentState>) -> Result<(), String> {
     let mut manager = state.inner().0.lock().await;
     manager.cancel().await
 }
 
-// --- ACP permission commands ---
+// --- Agent permission commands ---
 
 #[tauri::command]
-pub async fn acp_resolve_permission(
-    state: tauri::State<'_, AcpState>,
+pub async fn agent_resolve_permission(
+    state: tauri::State<'_, AgentState>,
     request_id: String,
     option_id: String,
 ) -> Result<(), String> {
@@ -513,19 +526,19 @@ pub async fn acp_resolve_permission(
     manager.resolve_permission(&request_id, &option_id).await
 }
 
-// --- ACP config option commands ---
+// --- Agent config option commands ---
 
 #[tauri::command]
-pub async fn acp_get_config_options(
-    state: tauri::State<'_, AcpState>,
+pub async fn agent_get_config_options(
+    state: tauri::State<'_, AgentState>,
 ) -> Result<Vec<SessionConfigOptionInfo>, String> {
     let manager = state.inner().0.lock().await;
     Ok(manager.get_config_options())
 }
 
 #[tauri::command]
-pub async fn acp_set_config_option(
-    state: tauri::State<'_, AcpState>,
+pub async fn agent_set_config_option(
+    state: tauri::State<'_, AgentState>,
     config_id: String,
     value: String,
 ) -> Result<Vec<SessionConfigOptionInfo>, String> {
@@ -533,7 +546,7 @@ pub async fn acp_set_config_option(
     manager.set_config_option(&config_id, &value).await
 }
 
-// --- ACP registry commands ---
+// --- ACP registry commands (keep acp_ prefix as these are ACP-specific) ---
 
 #[tauri::command]
 pub async fn acp_fetch_registry() -> Result<Vec<RegistryAgent>, String> {

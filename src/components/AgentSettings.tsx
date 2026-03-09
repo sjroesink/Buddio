@@ -3,6 +3,7 @@ import { invoke } from "@tauri-apps/api/core";
 import type {
   AgentConfig,
   AgentStatus,
+  ProviderKind,
   RegistryAgent,
   SessionConfigOptionInfo,
 } from "../types";
@@ -107,6 +108,13 @@ export function AgentSettings({
   const [updateError, setUpdateError] = useState<string | null>(null);
   const recorderRef = useRef<HTMLDivElement>(null);
 
+  // Provider selection state
+  const [selectedProvider, setSelectedProvider] = useState<ProviderKind>("acp");
+  const [claudeApiKey, setClaudeApiKey] = useState("");
+  const [claudeModel, setClaudeModel] = useState("claude-sonnet-4-20250514");
+  const [copilotToken, setCopilotToken] = useState("");
+  const [copilotModel, setCopilotModel] = useState("");
+
   // Load saved config, fetch registry, check installs
   useEffect(() => {
     async function init() {
@@ -124,6 +132,11 @@ export function AgentSettings({
         setSelectedAgentId(config.agent_id);
         setAutoFallback(config.auto_fallback);
         setAgents(registryAgents);
+
+        // Restore provider settings
+        setSelectedProvider((config.provider as ProviderKind) || "acp");
+        setClaudeApiKey(config.api_key || "");
+        setClaudeModel(config.model || "claude-sonnet-4-20250514");
 
         const installed = await invoke<Record<string, boolean>>(
           "acp_check_agents_installed",
@@ -291,48 +304,87 @@ export function AgentSettings({
   }
 
   async function handleConnect() {
-    const agent = agents.find((a) => a.id === selectedAgentId);
-    if (!agent) return;
+    let config: AgentConfig;
 
-    const envEntries = agentEnvValues[agent.id] || {};
-    const envString = Object.entries(envEntries)
-      .filter(([, v]) => v)
-      .map(([k, v]) => `${k}=${v}`)
-      .join(",");
+    if (selectedProvider === "acp") {
+      const agent = agents.find((a) => a.id === selectedAgentId);
+      if (!agent) return;
 
-    const isNpx = agent.distribution_type === "npx";
-    const distArgs = agent.distribution_args || [];
+      const envEntries = agentEnvValues[agent.id] || {};
+      const envString = Object.entries(envEntries)
+        .filter(([, v]) => v)
+        .map(([k, v]) => `${k}=${v}`)
+        .join(",");
 
-    let binaryPath: string;
-    let args: string;
+      const isNpx = agent.distribution_type === "npx";
+      const distArgs = agent.distribution_args || [];
 
-    if (isNpx) {
-      binaryPath = "npx";
-      args = [agent.distribution_detail, ...distArgs].join(" ");
+      let binaryPath: string;
+      let args: string;
+
+      if (isNpx) {
+        binaryPath = "npx";
+        args = [agent.distribution_detail, ...distArgs].join(" ");
+      } else {
+        const rawCmd = agent.distribution_detail.replace(/^\.\//, "").replace(/^\.\\/, "");
+        binaryPath = rawCmd;
+        args = distArgs.join(" ");
+      }
+
+      config = {
+        provider: "acp",
+        source: "registry",
+        agent_id: agent.id,
+        binary_path: binaryPath,
+        args,
+        env: envString,
+        auto_fallback: autoFallback,
+        api_key: "",
+        model: "",
+      };
+
+      try {
+        for (const [name, value] of Object.entries(envEntries)) {
+          await invoke("set_agent_env", {
+            agentId: agent.id,
+            envName: name,
+            value,
+          });
+        }
+      } catch (e) {
+        console.error("Failed to save env vars:", e);
+      }
+    } else if (selectedProvider === "claude") {
+      if (!claudeApiKey) return;
+      config = {
+        provider: "claude",
+        source: "sdk",
+        agent_id: "claude",
+        binary_path: "",
+        args: "",
+        env: "",
+        auto_fallback: autoFallback,
+        api_key: claudeApiKey,
+        model: claudeModel,
+      };
     } else {
-      const rawCmd = agent.distribution_detail.replace(/^\.\//, "").replace(/^\.\\/, "");
-      binaryPath = rawCmd;
-      args = distArgs.join(" ");
+      // copilot
+      if (!copilotToken) return;
+      config = {
+        provider: "copilot",
+        source: "sdk",
+        agent_id: "copilot",
+        binary_path: "",
+        args: "",
+        env: "",
+        auto_fallback: autoFallback,
+        api_key: copilotToken,
+        model: copilotModel,
+      };
     }
-
-    const config: AgentConfig = {
-      source: "registry",
-      agent_id: agent.id,
-      binary_path: binaryPath,
-      args,
-      env: envString,
-      auto_fallback: autoFallback,
-    };
 
     try {
       await invoke("save_agent_config", { config });
-      for (const [name, value] of Object.entries(envEntries)) {
-        await invoke("set_agent_env", {
-          agentId: agent.id,
-          envName: name,
-          value,
-        });
-      }
     } catch (e) {
       console.error("Failed to save config:", e);
     }
@@ -384,7 +436,11 @@ export function AgentSettings({
 
   const selectedAgent = agents.find((a) => a.id === selectedAgentId);
   const canConnect =
-    selectedAgent && installStatus[selectedAgentId] !== false;
+    selectedProvider === "acp"
+      ? selectedAgent && installStatus[selectedAgentId] !== false
+      : selectedProvider === "claude"
+        ? !!claudeApiKey
+        : !!copilotToken;
 
   // ── Render sections ──
 
@@ -488,11 +544,9 @@ export function AgentSettings({
     );
   }
 
-  function renderAgentSection() {
+  function renderAcpSettings() {
     return (
-      <div className="settings-section-content">
-        <div className="settings-section-title">Agent</div>
-
+      <>
         {loading ? (
           <div className="agent-list-empty">Loading agents...</div>
         ) : agents.length === 0 ? (
@@ -618,6 +672,92 @@ export function AgentSettings({
             })}
           </div>
         )}
+      </>
+    );
+  }
+
+  function renderClaudeSettings() {
+    return (
+      <div className="provider-settings">
+        <div className="agent-env-row">
+          <label className="agent-env-label">API Key:</label>
+          <input
+            type="password"
+            className="agent-env-input"
+            placeholder="sk-ant-..."
+            value={claudeApiKey}
+            onChange={(e) => setClaudeApiKey(e.target.value)}
+          />
+        </div>
+        <div className="agent-env-row">
+          <label className="agent-env-label">Model:</label>
+          <select
+            className="config-option-select"
+            value={claudeModel}
+            onChange={(e) => setClaudeModel(e.target.value)}
+          >
+            <option value="claude-sonnet-4-20250514">Claude Sonnet 4</option>
+            <option value="claude-opus-4-20250514">Claude Opus 4</option>
+            <option value="claude-haiku-4-20250506">Claude Haiku 4</option>
+          </select>
+        </div>
+      </div>
+    );
+  }
+
+  function renderCopilotSettings() {
+    return (
+      <div className="provider-settings">
+        <div className="agent-env-row">
+          <label className="agent-env-label">GitHub Token:</label>
+          <input
+            type="password"
+            className="agent-env-input"
+            placeholder="ghp_..."
+            value={copilotToken}
+            onChange={(e) => setCopilotToken(e.target.value)}
+          />
+        </div>
+        <div className="agent-env-row">
+          <label className="agent-env-label">Model:</label>
+          <input
+            type="text"
+            className="agent-env-input"
+            placeholder="Model ID (optional)"
+            value={copilotModel}
+            onChange={(e) => setCopilotModel(e.target.value)}
+          />
+        </div>
+        <div className="text-[11px] text-white/40 px-1 mt-1">
+          Copilot provider is coming soon.
+        </div>
+      </div>
+    );
+  }
+
+  function renderAgentSection() {
+    return (
+      <div className="settings-section-content">
+        <div className="settings-section-title">Provider</div>
+
+        {/* Provider selector */}
+        <div className="provider-selector">
+          {(["acp", "claude", "copilot"] as ProviderKind[]).map((p) => (
+            <button
+              key={p}
+              className={`provider-tab ${selectedProvider === p ? "provider-tab-active" : ""}`}
+              onClick={() => setSelectedProvider(p)}
+              disabled={status === "connected" || status === "connecting"}
+            >
+              {p === "acp" ? "ACP" : p === "claude" ? "Claude Code" : "Copilot"}
+            </button>
+          ))}
+        </div>
+
+        {/* Provider-specific settings */}
+        {selectedProvider === "acp" && renderAcpSettings()}
+        {selectedProvider === "claude" && renderClaudeSettings()}
+        {selectedProvider === "copilot" && renderCopilotSettings()}
 
         {/* Session Config Options - shown when connected */}
         {status === "connected" && configOptions.length > 0 && (

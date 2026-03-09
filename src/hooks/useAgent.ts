@@ -64,7 +64,7 @@ function normalizeToolStatus(
   return null;
 }
 
-export function useAcpAgent() {
+export function useAgent() {
   const [status, setStatus] = useState<AgentStatus>("disconnected");
   const [errorMessage, setErrorMessage] = useState<string | null>(null);
   const [messages, setMessages] = useState("");
@@ -97,7 +97,7 @@ export function useAcpAgent() {
   activeConversationIdRef.current = activeConversationId;
 
   useEffect(() => {
-    const unlistenUpdate = listen<AgentUpdate>("acp-update", (event) => {
+    const unlistenUpdate = listen<AgentUpdate>("agent-update", (event) => {
       const update = event.payload;
 
       switch (update.type) {
@@ -217,7 +217,7 @@ export function useAcpAgent() {
     });
 
     const unlistenPermission = listen<PermissionRequest>(
-      "acp-permission-request",
+      "agent-permission-request",
       (event) => {
         const req = event.payload;
         setPermissionRequest(req);
@@ -239,7 +239,7 @@ export function useAcpAgent() {
     );
 
     const unlistenConfigOptions = listen<SessionConfigOptionInfo[]>(
-      "acp-config-options",
+      "agent-config-options",
       (event) => {
         setConfigOptions(event.payload);
       },
@@ -256,10 +256,10 @@ export function useAcpAgent() {
     try {
       setStatus("connecting");
       setErrorMessage(null);
-      await invoke("acp_connect", { config });
+      await invoke("agent_connect", { config });
       // Fetch initial config options after connect
       const opts = await invoke<SessionConfigOptionInfo[]>(
-        "acp_get_config_options",
+        "agent_get_config_options",
       );
       setConfigOptions(opts);
     } catch (e) {
@@ -275,13 +275,13 @@ export function useAcpAgent() {
 
     async function connectOnStartup() {
       try {
-        const currentStatus = await invoke<AgentStatus>("acp_get_status");
+        const currentStatus = await invoke<AgentStatus>("agent_get_status");
         setStatus(currentStatus);
 
         if (currentStatus === "connected" || currentStatus === "connecting") {
           if (currentStatus === "connected") {
             const opts = await invoke<SessionConfigOptionInfo[]>(
-              "acp_get_config_options",
+              "agent_get_config_options",
             );
             setConfigOptions(opts);
           }
@@ -330,7 +330,7 @@ export function useAcpAgent() {
 
   const disconnect = useCallback(async () => {
     try {
-      await invoke("acp_disconnect");
+      await invoke("agent_disconnect");
     } catch (e) {
       console.error("Failed to disconnect agent:", e);
     }
@@ -422,7 +422,7 @@ export function useAcpAgent() {
     async (query: string) => {
       await startTurn(query, async (normalizedQuery) => {
         const items = await invoke("get_all_items");
-        await invoke("acp_prompt", {
+        await invoke("agent_prompt", {
           query: normalizedQuery,
           contextItems: items,
         });
@@ -434,7 +434,7 @@ export function useAcpAgent() {
   const promptSlashCommand = useCallback(
     async (query: string) => {
       await startTurn(query, async (normalizedQuery) => {
-        await invoke("acp_prompt_slash_command", {
+        await invoke("agent_prompt_slash_command", {
           query: normalizedQuery,
         });
       });
@@ -444,7 +444,7 @@ export function useAcpAgent() {
 
   const cancel = useCallback(async () => {
     try {
-      await invoke("acp_cancel");
+      await invoke("agent_cancel");
       setTurnActive(false);
       setIsThinking(false);
       activeAssistantIdRef.current = null;
@@ -466,7 +466,7 @@ export function useAcpAgent() {
   const resolvePermission = useCallback(
     async (requestId: string, optionId: string) => {
       try {
-        await invoke("acp_resolve_permission", { requestId, optionId });
+        await invoke("agent_resolve_permission", { requestId, optionId });
         setPermissionRequest(null);
 
         // Mark the tool call entry as approved (or denied based on optionId)
@@ -568,7 +568,7 @@ export function useAcpAgent() {
     async (configId: string, value: string) => {
       try {
         const updated = await invoke<SessionConfigOptionInfo[]>(
-          "acp_set_config_option",
+          "agent_set_config_option",
           { configId, value },
         );
         setConfigOptions(updated);
