@@ -15,7 +15,7 @@ const BUDDIO_READ_TOOLS = new Set([
   "history_recent_rewrites", "conversations_get", "conversations_list",
   "conversations_search", "conversations_get_messages", "conversations_search_messages",
   "conversations_recent_context", "slash_commands_get", "slash_commands_list",
-  "slash_commands_search", "settings_get", "settings_list", "db_path",
+  "slash_commands_search", "slash_commands_get_params", "settings_get", "settings_list", "db_path",
 ]);
 
 // AskUserQuestion tool definition — allows Claude to ask the user clarifying questions
@@ -60,6 +60,24 @@ const ASK_USER_QUESTION_TOOL: Anthropic.Tool = {
   },
 };
 
+const REPLACE_SELECTION_TOOL: Anthropic.Tool = {
+  name: "replace_selection",
+  description:
+    "Replace the user's currently selected text with new text. " +
+    "Use this when the user asks to rewrite, rephrase, translate, summarize, or transform their selected text. " +
+    "Only use this tool when there is selected text in the context.",
+  input_schema: {
+    type: "object" as const,
+    properties: {
+      text: {
+        type: "string",
+        description: "The replacement text to insert in place of the current selection",
+      },
+    },
+    required: ["text"],
+  },
+};
+
 export class ClaudeProvider implements SidecarProvider {
   private client: Anthropic | null = null;
   private model = "claude-sonnet-4-20250514";
@@ -68,6 +86,7 @@ export class ClaudeProvider implements SidecarProvider {
   private abortController: AbortController | null = null;
   private pendingPermissions = new Map<string, (optionId: string) => void>();
   private pendingQuestions = new Map<string, (answers: Record<string, string>) => void>();
+  private pendingReplacements = new Map<string, (success: boolean) => void>();
 
   async init(
     config: ProviderConfig,
@@ -86,6 +105,7 @@ export class ClaudeProvider implements SidecarProvider {
         input_schema: t.inputSchema as Anthropic.Tool.InputSchema,
       })),
       ASK_USER_QUESTION_TOOL,
+      REPLACE_SELECTION_TOOL,
     ];
   }
 
@@ -139,6 +159,11 @@ export class ClaudeProvider implements SidecarProvider {
       resolver({ __cancelled__: "true" });
     }
     this.pendingQuestions.clear();
+    // Cancel pending replacements
+    for (const [, resolver] of this.pendingReplacements) {
+      resolver(false);
+    }
+    this.pendingReplacements.clear();
   }
 
   resolvePermission(requestId: string, optionId: string): void {
@@ -154,6 +179,14 @@ export class ClaudeProvider implements SidecarProvider {
     if (resolver) {
       this.pendingQuestions.delete(requestId);
       resolver(answers);
+    }
+  }
+
+  resolveReplacement(requestId: string, success: boolean): void {
+    const resolver = this.pendingReplacements.get(requestId);
+    if (resolver) {
+      this.pendingReplacements.delete(requestId);
+      resolver(success);
     }
   }
 
@@ -247,6 +280,47 @@ export class ClaudeProvider implements SidecarProvider {
             type: "tool_result",
             tool_use_id: toolId,
             content: JSON.stringify({ questions, answers }),
+          });
+          continue;
+        }
+
+        if (toolName === "replace_selection") {
+          const text = (toolInput.text ?? "") as string;
+          const requestId = toolId;
+
+          // Send tool call event for UI visibility
+          this.send({
+            type: "tool_call",
+            id: toolId,
+            title: "replace_selection",
+            kind: "custom",
+            content: null,
+          });
+
+          // Request Rust to perform the replacement
+          this.send({
+            type: "replace_selection_request",
+            request_id: requestId,
+            text,
+          });
+
+          // Wait for Rust to complete
+          const success = await new Promise<boolean>((resolve) => {
+            this.pendingReplacements.set(requestId, resolve);
+          });
+
+          this.send({
+            type: "tool_call_update",
+            id: toolId,
+            title: null,
+            status: success ? "Complete" : "Error",
+          });
+
+          toolResults.push({
+            type: "tool_result",
+            tool_use_id: toolId,
+            content: success ? "Selection replaced successfully" : "Failed to replace selection",
+            is_error: !success,
           });
           continue;
         }
