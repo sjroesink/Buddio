@@ -119,6 +119,16 @@ async function handleMessage(msg: IncomingMessage): Promise<void> {
       break;
     }
 
+    case "resolve_replace_selection": {
+      if (provider && "resolveReplacement" in provider) {
+        (provider as ClaudeProvider).resolveReplacement(
+          msg.request_id,
+          msg.success,
+        );
+      }
+      break;
+    }
+
     case "shutdown": {
       await cleanup();
       process.exit(0);
