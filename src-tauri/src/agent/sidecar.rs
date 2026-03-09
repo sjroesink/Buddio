@@ -1,6 +1,6 @@
 use async_trait::async_trait;
 use serde::{Deserialize, Serialize};
-use tauri::{AppHandle, Emitter};
+use tauri::{AppHandle, Emitter, Manager};
 use tokio::io::AsyncWriteExt;
 use tokio::sync::mpsc;
 
@@ -48,6 +48,10 @@ enum SidecarEvent {
     },
     TurnComplete {
         stop_reason: String,
+    },
+    ReplaceSelectionRequest {
+        request_id: String,
+        text: String,
     },
     Error {
         message: String,
@@ -97,6 +101,10 @@ enum SidecarCommand {
     ResolveQuestion {
         request_id: String,
         answers: std::collections::HashMap<String, String>,
+    },
+    ResolveReplaceSelection {
+        request_id: String,
+        success: bool,
     },
     Shutdown,
 }
@@ -219,6 +227,7 @@ impl AgentProvider for SidecarProvider {
 
         // Spawn stdout reader task
         let stdin_tx_for_init = stdin_tx.clone();
+        let stdin_tx_for_replace = stdin_tx.clone();
         tokio::spawn(async move {
             use tokio::io::{AsyncBufReadExt, BufReader};
 
@@ -368,6 +377,31 @@ impl AgentProvider for SidecarProvider {
                             "agent-update",
                             AgentUpdate::TurnComplete { stop_reason },
                         );
+                    }
+                    SidecarEvent::ReplaceSelectionRequest { request_id, text } => {
+                        let stdin_tx = stdin_tx_for_replace.clone();
+                        let app_for_replace = app_clone.clone();
+                        tokio::spawn(async move {
+                            // Hide the window first so focus returns to source app
+                            if let Some(window) = app_for_replace.get_webview_window("main") {
+                                let _ = window.hide();
+                            }
+
+                            // Small delay for window focus to return
+                            tokio::time::sleep(std::time::Duration::from_millis(150)).await;
+
+                            // Perform the replacement
+                            let success = tokio::task::spawn_blocking(move || {
+                                crate::context::replace_selection(&text).is_ok()
+                            })
+                            .await
+                            .unwrap_or(false);
+
+                            let _ = stdin_tx.send(SidecarCommand::ResolveReplaceSelection {
+                                request_id,
+                                success,
+                            });
+                        });
                     }
                     SidecarEvent::Error { message } => {
                         eprintln!("Sidecar error: {message}");
