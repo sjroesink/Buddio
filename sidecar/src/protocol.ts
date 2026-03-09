@@ -35,13 +35,20 @@ export interface ShutdownMessage {
   type: "shutdown";
 }
 
+export interface ResolveReplaceSelectionMessage {
+  type: "resolve_replace_selection";
+  request_id: string;
+  success: boolean;
+}
+
 export type IncomingMessage =
   | InitMessage
   | PromptMessage
   | CancelMessage
   | ResolvePermissionMessage
   | ResolveQuestionMessage
-  | ShutdownMessage;
+  | ShutdownMessage
+  | ResolveReplaceSelectionMessage;
 
 // === Node → Rust (stdout) messages ===
 
@@ -107,6 +114,12 @@ export interface ErrorOut {
   message: string;
 }
 
+export interface ReplaceSelectionRequestOut {
+  type: "replace_selection_request";
+  request_id: string;
+  text: string;
+}
+
 export type OutgoingMessage =
   | StatusChangeOut
   | MessageChunkOut
@@ -116,4 +129,5 @@ export type OutgoingMessage =
   | PermissionRequestOut
   | UserQuestionOut
   | TurnCompleteOut
-  | ErrorOut;
+  | ErrorOut
+  | ReplaceSelectionRequestOut;
