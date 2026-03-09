@@ -530,7 +530,9 @@ function App() {
               isThinking={agent.isThinking}
               turnActive={agent.turnActive}
               permissionRequest={agent.permissionRequest}
+              userQuestion={agent.userQuestion}
               onResolvePermission={agent.resolvePermission}
+              onResolveQuestion={agent.resolveQuestion}
               onNewConversation={handleNewConversation}
               onShowHistory={handleShowHistory}
               hasSelection={launchCtx.hasSelection}

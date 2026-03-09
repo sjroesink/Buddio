@@ -74,7 +74,11 @@ async function handleMessage(msg: IncomingMessage): Promise<void> {
       }
 
       // Initialize provider with tools
-      await provider.init(msg.config, tools, send);
+      await provider.init(
+        { apiKey: msg.config.api_key, model: msg.config.model },
+        tools,
+        send,
+      );
       send({ type: "status_change", status: "connected" });
       break;
     }
@@ -100,6 +104,16 @@ async function handleMessage(msg: IncomingMessage): Promise<void> {
         (provider as ClaudeProvider).resolvePermission(
           msg.request_id,
           msg.option_id,
+        );
+      }
+      break;
+    }
+
+    case "resolve_question": {
+      if (provider && "resolveQuestion" in provider) {
+        (provider as ClaudeProvider).resolveQuestion(
+          msg.request_id,
+          msg.answers,
         );
       }
       break;

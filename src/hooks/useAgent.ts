@@ -9,6 +9,7 @@ import type {
   AgentThreadMessage,
   ConversationWithPreview,
   SessionConfigOptionInfo,
+  UserQuestionRequest,
 } from "../types";
 
 function makeMessageId(prefix: "user" | "assistant") {
@@ -74,6 +75,8 @@ export function useAgent() {
   const [turnActive, setTurnActive] = useState(false);
   const [permissionRequest, setPermissionRequest] =
     useState<PermissionRequest | null>(null);
+  const [userQuestion, setUserQuestion] =
+    useState<UserQuestionRequest | null>(null);
   const activeAssistantIdRef = useRef<string | null>(null);
   const startupConnectAttempted = useRef(false);
 
@@ -238,6 +241,13 @@ export function useAgent() {
       },
     );
 
+    const unlistenUserQuestion = listen<UserQuestionRequest>(
+      "agent-user-question",
+      (event) => {
+        setUserQuestion(event.payload);
+      },
+    );
+
     const unlistenConfigOptions = listen<SessionConfigOptionInfo[]>(
       "agent-config-options",
       (event) => {
@@ -248,6 +258,7 @@ export function useAgent() {
     return () => {
       unlistenUpdate.then((f) => f());
       unlistenPermission.then((f) => f());
+      unlistenUserQuestion.then((f) => f());
       unlistenConfigOptions.then((f) => f());
     };
   }, []);
@@ -290,7 +301,12 @@ export function useAgent() {
 
         const config = await invoke<AgentConfig>("get_agent_config");
 
-        if (!config.binary_path.trim()) {
+        // Check provider-specific requirements before auto-connecting
+        const provider = config.provider || "acp";
+        if (provider === "acp" && !config.binary_path.trim()) {
+          return;
+        }
+        if ((provider === "claude" || provider === "copilot") && !config.api_key?.trim()) {
           return;
         }
 
@@ -485,6 +501,18 @@ export function useAgent() {
     [],
   );
 
+  const resolveQuestion = useCallback(
+    async (requestId: string, answers: Record<string, string>) => {
+      try {
+        await invoke("agent_resolve_question", { requestId, answers });
+        setUserQuestion(null);
+      } catch (e) {
+        console.error("Failed to resolve question:", e);
+      }
+    },
+    [],
+  );
+
   // --- Conversation management ---
 
   const loadConversations = useCallback(async () => {
@@ -588,6 +616,7 @@ export function useAgent() {
     isThinking,
     turnActive,
     permissionRequest,
+    userQuestion,
     activeConversationId,
     conversations,
     configOptions,
@@ -598,6 +627,7 @@ export function useAgent() {
     cancel,
     clearThread,
     resolvePermission,
+    resolveQuestion,
     loadConversations,
     loadConversation,
     newConversation,

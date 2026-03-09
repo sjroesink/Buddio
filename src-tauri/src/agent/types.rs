@@ -88,6 +88,29 @@ pub struct PermissionOptionInfo {
     pub kind: String,
 }
 
+// --- User Question types (AskUserQuestion from Claude) ---
+
+#[derive(Debug, Clone, Serialize, Deserialize)]
+pub struct UserQuestionRequest {
+    pub request_id: String,
+    pub tool_use_id: String,
+    pub questions: Vec<UserQuestionItem>,
+}
+
+#[derive(Debug, Clone, Serialize, Deserialize)]
+pub struct UserQuestionItem {
+    pub question: String,
+    pub header: String,
+    pub options: Vec<UserQuestionOption>,
+    pub multi_select: bool,
+}
+
+#[derive(Debug, Clone, Serialize, Deserialize)]
+pub struct UserQuestionOption {
+    pub label: String,
+    pub description: String,
+}
+
 #[derive(Debug, Clone, Serialize, Deserialize, Default)]
 pub struct AgentConfig {
     #[serde(default)]

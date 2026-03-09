@@ -65,6 +65,26 @@ export interface PermissionOption {
   kind: string;
 }
 
+// --- User Question types (AskUserQuestion from Claude) ---
+
+export interface UserQuestionRequest {
+  request_id: string;
+  tool_use_id: string;
+  questions: UserQuestionItem[];
+}
+
+export interface UserQuestionItem {
+  question: string;
+  header: string;
+  options: UserQuestionOption[];
+  multi_select: boolean;
+}
+
+export interface UserQuestionOption {
+  label: string;
+  description: string;
+}
+
 export interface RequiredEnvVar {
   name: string;
   description: string;

@@ -25,6 +25,12 @@ export interface ResolvePermissionMessage {
   option_id: string;
 }
 
+export interface ResolveQuestionMessage {
+  type: "resolve_question";
+  request_id: string;
+  answers: Record<string, string>;
+}
+
 export interface ShutdownMessage {
   type: "shutdown";
 }
@@ -34,6 +40,7 @@ export type IncomingMessage =
   | PromptMessage
   | CancelMessage
   | ResolvePermissionMessage
+  | ResolveQuestionMessage
   | ShutdownMessage;
 
 // === Node → Rust (stdout) messages ===
@@ -81,6 +88,20 @@ export interface TurnCompleteOut {
   stop_reason: string;
 }
 
+export interface UserQuestionOut {
+  type: "user_question";
+  request_id: string;
+  tool_use_id: string;
+  questions: UserQuestionItem[];
+}
+
+export interface UserQuestionItem {
+  question: string;
+  header: string;
+  options: { label: string; description: string }[];
+  multiSelect: boolean;
+}
+
 export interface ErrorOut {
   type: "error";
   message: string;
@@ -93,5 +114,6 @@ export type OutgoingMessage =
   | ToolCallOut
   | ToolCallUpdateOut
   | PermissionRequestOut
+  | UserQuestionOut
   | TurnCompleteOut
   | ErrorOut;

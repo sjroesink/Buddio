@@ -30,6 +30,11 @@ pub trait AgentProvider: Send {
     fn send_prompt(&self, content: String) -> Result<(), String>;
     async fn cancel(&mut self) -> Result<(), String>;
     fn resolve_permission(&self, request_id: &str, option_id: &str) -> Result<(), String>;
+    fn resolve_question(
+        &self,
+        request_id: &str,
+        answers: std::collections::HashMap<String, String>,
+    ) -> Result<(), String>;
     fn config_options(&self) -> Vec<SessionConfigOptionInfo>;
     async fn set_config_option(
         &mut self,

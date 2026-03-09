@@ -107,6 +107,15 @@ impl AgentManager {
         provider.resolve_permission(request_id, option_id)
     }
 
+    pub fn resolve_question(
+        &self,
+        request_id: &str,
+        answers: std::collections::HashMap<String, String>,
+    ) -> Result<(), String> {
+        let provider = self.provider.as_ref().ok_or("No agent provider active")?;
+        provider.resolve_question(request_id, answers)
+    }
+
     pub fn get_config_options(&self) -> Vec<SessionConfigOptionInfo> {
         self.provider
             .as_ref()

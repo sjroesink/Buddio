@@ -415,6 +415,15 @@ impl AgentProvider for AcpProvider {
             .map_err(|_| "Failed to resolve permission".to_string())
     }
 
+    fn resolve_question(
+        &self,
+        _request_id: &str,
+        _answers: std::collections::HashMap<String, String>,
+    ) -> Result<(), String> {
+        // ACP protocol does not use AskUserQuestion
+        Err("AskUserQuestion not supported by ACP provider".to_string())
+    }
+
     fn config_options(&self) -> Vec<SessionConfigOptionInfo> {
         self.config_options.clone()
     }

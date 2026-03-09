@@ -41,6 +41,11 @@ enum SidecarEvent {
         tool_name: String,
         options: Vec<SidecarPermOption>,
     },
+    UserQuestion {
+        request_id: String,
+        tool_use_id: String,
+        questions: Vec<SidecarQuestionItem>,
+    },
     TurnComplete {
         stop_reason: String,
     },
@@ -54,6 +59,21 @@ struct SidecarPermOption {
     option_id: String,
     name: String,
     kind: String,
+}
+
+#[derive(Debug, Clone, Deserialize, Serialize)]
+struct SidecarQuestionItem {
+    question: String,
+    header: String,
+    options: Vec<SidecarQuestionOption>,
+    #[serde(rename = "multiSelect")]
+    multi_select: bool,
+}
+
+#[derive(Debug, Clone, Deserialize, Serialize)]
+struct SidecarQuestionOption {
+    label: String,
+    description: String,
 }
 
 // --- JSON lines protocol types (Rust → Node) ---
@@ -73,6 +93,10 @@ enum SidecarCommand {
     ResolvePermission {
         request_id: String,
         option_id: String,
+    },
+    ResolveQuestion {
+        request_id: String,
+        answers: std::collections::HashMap<String, String>,
     },
     Shutdown,
 }
@@ -308,6 +332,37 @@ impl AgentProvider for SidecarProvider {
                             },
                         );
                     }
+                    SidecarEvent::UserQuestion {
+                        request_id,
+                        tool_use_id,
+                        questions,
+                    } => {
+                        let _ = app_clone.emit(
+                            "agent-user-question",
+                            crate::agent::types::UserQuestionRequest {
+                                request_id,
+                                tool_use_id,
+                                questions: questions
+                                    .into_iter()
+                                    .map(|q| crate::agent::types::UserQuestionItem {
+                                        question: q.question,
+                                        header: q.header,
+                                        options: q
+                                            .options
+                                            .into_iter()
+                                            .map(|o| {
+                                                crate::agent::types::UserQuestionOption {
+                                                    label: o.label,
+                                                    description: o.description,
+                                                }
+                                            })
+                                            .collect(),
+                                        multi_select: q.multi_select,
+                                    })
+                                    .collect(),
+                            },
+                        );
+                    }
                     SidecarEvent::TurnComplete { stop_reason } => {
                         let _ = app_clone.emit(
                             "agent-update",
@@ -316,9 +371,18 @@ impl AgentProvider for SidecarProvider {
                     }
                     SidecarEvent::Error { message } => {
                         eprintln!("Sidecar error: {message}");
-                        // If still in init phase, report it
                         if let Some(tx) = init_tx.take() {
+                            // Init phase — report via oneshot
                             let _ = tx.send(Err(message));
+                        } else {
+                            // Runtime phase — forward error as a message chunk
+                            // so the user can see what went wrong
+                            let _ = app_clone.emit(
+                                "agent-update",
+                                AgentUpdate::MessageChunk {
+                                    text: format!("\n\n**Error:** {message}"),
+                                },
+                            );
                         }
                     }
                 }
@@ -379,6 +443,17 @@ impl AgentProvider for SidecarProvider {
         self.send_command(SidecarCommand::ResolvePermission {
             request_id: request_id.to_string(),
             option_id: option_id.to_string(),
+        })
+    }
+
+    fn resolve_question(
+        &self,
+        request_id: &str,
+        answers: std::collections::HashMap<String, String>,
+    ) -> Result<(), String> {
+        self.send_command(SidecarCommand::ResolveQuestion {
+            request_id: request_id.to_string(),
+            answers,
         })
     }
 

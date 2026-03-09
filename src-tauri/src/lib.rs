@@ -62,6 +62,7 @@ pub fn run() {
             agent_prompt_slash_command,
             agent_cancel,
             agent_resolve_permission,
+            agent_resolve_question,
             agent_get_config_options,
             agent_set_config_option,
             acp_fetch_registry,

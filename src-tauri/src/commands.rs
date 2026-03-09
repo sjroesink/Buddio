@@ -526,6 +526,16 @@ pub async fn agent_resolve_permission(
     manager.resolve_permission(&request_id, &option_id).await
 }
 
+#[tauri::command]
+pub async fn agent_resolve_question(
+    state: tauri::State<'_, AgentState>,
+    request_id: String,
+    answers: std::collections::HashMap<String, String>,
+) -> Result<(), String> {
+    let manager = state.inner().0.lock().await;
+    manager.resolve_question(&request_id, answers)
+}
+
 // --- Agent config option commands ---
 
 #[tauri::command]

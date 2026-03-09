@@ -1,7 +1,7 @@
 import { useEffect, useRef, useState } from "react";
 import ReactMarkdown from "react-markdown";
 import remarkGfm from "remark-gfm";
-import type { AgentThreadMessage, PermissionRequest } from "../types";
+import type { AgentThreadMessage, PermissionRequest, UserQuestionRequest } from "../types";
 import { PermissionDialog } from "./PermissionDialog";
 
 function friendlyToolTitle(raw: string): string {
@@ -267,13 +267,131 @@ function DogAvatar() {
   );
 }
 
+function UserQuestionInline({
+  request,
+  onResolve,
+}: {
+  request: UserQuestionRequest;
+  onResolve: (requestId: string, answers: Record<string, string>) => void;
+}) {
+  // Track selected option(s) per question (keyed by question text)
+  const [selections, setSelections] = useState<Record<string, string[]>>({});
+  const [freeText, setFreeText] = useState<Record<string, string>>({});
+
+  const toggleOption = (question: string, label: string, multiSelect: boolean) => {
+    setSelections((prev) => {
+      const current = prev[question] ?? [];
+      if (multiSelect) {
+        return {
+          ...prev,
+          [question]: current.includes(label)
+            ? current.filter((l) => l !== label)
+            : [...current, label],
+        };
+      }
+      return { ...prev, [question]: [label] };
+    });
+    // Clear free text when selecting a predefined option
+    setFreeText((prev) => ({ ...prev, [question]: "" }));
+  };
+
+  const handleFreeTextChange = (question: string, text: string) => {
+    setFreeText((prev) => ({ ...prev, [question]: text }));
+    // Clear predefined selections when typing free text
+    if (text) {
+      setSelections((prev) => ({ ...prev, [question]: [] }));
+    }
+  };
+
+  const allAnswered = request.questions.every((q) => {
+    const selected = selections[q.question] ?? [];
+    const free = freeText[q.question] ?? "";
+    return selected.length > 0 || free.length > 0;
+  });
+
+  const handleSubmit = () => {
+    const answers: Record<string, string> = {};
+    for (const q of request.questions) {
+      const selected = selections[q.question] ?? [];
+      const free = freeText[q.question] ?? "";
+      answers[q.question] = free || selected.join(", ");
+    }
+    onResolve(request.request_id, answers);
+  };
+
+  return (
+    <div className="mb-3 flex justify-start">
+      <div className="max-w-[90%] rounded-lg bg-launcher-surface/55 border border-launcher-accent/30 p-3 space-y-3">
+        {request.questions.map((q) => {
+          const selected = selections[q.question] ?? [];
+          const free = freeText[q.question] ?? "";
+          return (
+            <div key={q.question} className="space-y-1.5">
+              <div className="text-xs font-medium text-launcher-accent/80 uppercase tracking-wider">
+                {q.header}
+              </div>
+              <div className="text-sm text-launcher-text/90">{q.question}</div>
+              <div className="flex flex-wrap gap-1.5">
+                {q.options.map((opt) => {
+                  const isSelected = selected.includes(opt.label);
+                  return (
+                    <button
+                      key={opt.label}
+                      onClick={() => toggleOption(q.question, opt.label, q.multi_select)}
+                      className={`text-xs px-2.5 py-1.5 rounded-md border transition-colors ${
+                        isSelected
+                          ? "bg-launcher-accent/25 border-launcher-accent/50 text-launcher-text"
+                          : "bg-launcher-surface/80 border-launcher-border/40 text-launcher-text/70 hover:border-launcher-accent/40 hover:text-launcher-text/90"
+                      }`}
+                      title={opt.description}
+                    >
+                      {opt.label}
+                    </button>
+                  );
+                })}
+              </div>
+              {/* Free text input */}
+              <input
+                type="text"
+                value={free}
+                onChange={(e) => handleFreeTextChange(q.question, e.target.value)}
+                placeholder="Or type your own answer..."
+                className="w-full text-xs px-2.5 py-1.5 rounded-md border bg-launcher-surface/80 border-launcher-border/40 text-launcher-text/80 placeholder:text-launcher-muted/50 focus:outline-none focus:border-launcher-accent/50"
+                onKeyDown={(e) => {
+                  if (e.key === "Enter" && allAnswered) {
+                    e.preventDefault();
+                    handleSubmit();
+                  }
+                }}
+              />
+            </div>
+          );
+        })}
+        <button
+          onClick={handleSubmit}
+          disabled={!allAnswered}
+          className={`text-xs px-3 py-1.5 rounded-md font-medium transition-colors ${
+            allAnswered
+              ? "bg-launcher-accent/25 border border-launcher-accent/50 text-launcher-text hover:bg-launcher-accent/35"
+              : "bg-launcher-surface/60 border border-launcher-border/30 text-launcher-muted/50 cursor-not-allowed"
+          }`}
+        >
+          Submit
+        </button>
+      </div>
+    </div>
+  );
+}
+
 interface AgentResponseProps {
   thread: AgentThreadMessage[];
   thoughts: string;
   isThinking: boolean;
   turnActive: boolean;
   permissionRequest: PermissionRequest | null;
+  userQuestion: UserQuestionRequest | null;
   onResolvePermission: (requestId: string, optionId: string) => void;
+  onResolveQuestion: (requestId: string, answers: Record<string, string>) => void;
   onNewConversation?: () => void;
   onShowHistory?: () => void;
   hasSelection?: boolean;
@@ -288,7 +406,9 @@ export function AgentResponse({
   isThinking,
   turnActive,
   permissionRequest,
+  userQuestion,
   onResolvePermission,
+  onResolveQuestion,
   onNewConversation,
   onShowHistory,
   hasSelection,
@@ -303,7 +423,7 @@ export function AgentResponse({
     if (scrollRef.current) {
       scrollRef.current.scrollTop = scrollRef.current.scrollHeight;
     }
-  }, [thread, thoughts, isThinking, turnActive, permissionRequest]);
+  }, [thread, thoughts, isThinking, turnActive, permissionRequest, userQuestion]);
 
   const toggleExpanded = (id: string) => {
     setExpandedTools((prev) => {
@@ -497,10 +617,12 @@ export function AgentResponse({
             !turnActive &&
             createdCommandName &&
             onExecuteSlashCommand;
+          const hasToolCalls = thread.some((e) => e.role === "tool");
           const showReplace =
             isLastNonEmptyAssistant &&
             !turnActive &&
             !createdCommandName &&
+            !hasToolCalls &&
             hasSelection &&
             onReplaceSelection;
           const bubbleClassName = `rounded-lg px-3 py-2 text-sm leading-relaxed ${
@@ -567,7 +689,15 @@ export function AgentResponse({
             </div>
           )}
 
-        {isThinking && (
+        {/* Inline user question */}
+        {userQuestion && (
+          <UserQuestionInline
+            request={userQuestion}
+            onResolve={onResolveQuestion}
+          />
+        )}
+
+        {isThinking && !userQuestion && (
           <div className="agent-thinking mb-2">
             <span className="thinking-dots">
               <span>.</span>

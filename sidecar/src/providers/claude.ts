@@ -18,6 +18,48 @@ const BUDDIO_READ_TOOLS = new Set([
   "slash_commands_search", "settings_get", "settings_list", "db_path",
 ]);
 
+// AskUserQuestion tool definition — allows Claude to ask the user clarifying questions
+const ASK_USER_QUESTION_TOOL: Anthropic.Tool = {
+  name: "AskUserQuestion",
+  description:
+    "Ask the user one or more clarifying questions when you need more information to proceed. " +
+    "Each question should have 2-4 predefined options for the user to choose from. " +
+    "Use this when the task has multiple valid approaches and you need user input to decide.",
+  input_schema: {
+    type: "object" as const,
+    properties: {
+      questions: {
+        type: "array",
+        items: {
+          type: "object",
+          properties: {
+            question: { type: "string", description: "The question text to display" },
+            header: { type: "string", description: "Short label (max 12 chars)" },
+            options: {
+              type: "array",
+              items: {
+                type: "object",
+                properties: {
+                  label: { type: "string", description: "Option label" },
+                  description: { type: "string", description: "Option description" },
+                },
+                required: ["label", "description"],
+              },
+              minItems: 2,
+              maxItems: 4,
+            },
+            multiSelect: { type: "boolean", description: "Allow multiple selections" },
+          },
+          required: ["question", "header", "options", "multiSelect"],
+        },
+        minItems: 1,
+        maxItems: 4,
+      },
+    },
+    required: ["questions"],
+  },
+};
+
 export class ClaudeProvider implements SidecarProvider {
   private client: Anthropic | null = null;
   private model = "claude-sonnet-4-20250514";
@@ -25,6 +67,7 @@ export class ClaudeProvider implements SidecarProvider {
   private send: SendFn = () => {};
   private abortController: AbortController | null = null;
   private pendingPermissions = new Map<string, (optionId: string) => void>();
+  private pendingQuestions = new Map<string, (answers: Record<string, string>) => void>();
 
   async init(
     config: ProviderConfig,
@@ -35,12 +78,15 @@ export class ClaudeProvider implements SidecarProvider {
     this.model = config.model || "claude-sonnet-4-20250514";
     this.client = new Anthropic({ apiKey: config.apiKey });
 
-    // Convert MCP tools to Anthropic tool format
-    this.tools = mcpTools.map((t) => ({
-      name: t.name,
-      description: t.description,
-      input_schema: t.inputSchema as Anthropic.Tool.InputSchema,
-    }));
+    // Convert MCP tools to Anthropic tool format + add AskUserQuestion
+    this.tools = [
+      ...mcpTools.map((t) => ({
+        name: t.name,
+        description: t.description,
+        input_schema: t.inputSchema as Anthropic.Tool.InputSchema,
+      })),
+      ASK_USER_QUESTION_TOOL,
+    ];
   }
 
   async prompt(
@@ -88,6 +134,11 @@ export class ClaudeProvider implements SidecarProvider {
       resolver("__cancelled__");
     }
     this.pendingPermissions.clear();
+    // Cancel pending questions
+    for (const [, resolver] of this.pendingQuestions) {
+      resolver({ __cancelled__: "true" });
+    }
+    this.pendingQuestions.clear();
   }
 
   resolvePermission(requestId: string, optionId: string): void {
@@ -95,6 +146,14 @@ export class ClaudeProvider implements SidecarProvider {
     if (resolver) {
       this.pendingPermissions.delete(requestId);
       resolver(optionId);
+    }
+  }
+
+  resolveQuestion(requestId: string, answers: Record<string, string>): void {
+    const resolver = this.pendingQuestions.get(requestId);
+    if (resolver) {
+      this.pendingQuestions.delete(requestId);
+      resolver(answers);
     }
   }
 
@@ -150,6 +209,47 @@ export class ClaudeProvider implements SidecarProvider {
         const toolId = toolUse.id;
         const toolName = toolUse.name;
         const toolInput = toolUse.input as Record<string, unknown>;
+
+        // Handle AskUserQuestion specially — don't go through MCP
+        if (toolName === "AskUserQuestion") {
+          const questions = (toolInput.questions ?? []) as Array<{
+            question: string;
+            header: string;
+            options: { label: string; description: string }[];
+            multiSelect: boolean;
+          }>;
+
+          const requestId = toolId;
+          this.send({
+            type: "user_question",
+            request_id: requestId,
+            tool_use_id: toolId,
+            questions,
+          });
+
+          // Wait for user to answer
+          const answers = await new Promise<Record<string, string>>((resolve) => {
+            this.pendingQuestions.set(requestId, resolve);
+          });
+
+          if ("__cancelled__" in answers) {
+            toolResults.push({
+              type: "tool_result",
+              tool_use_id: toolId,
+              content: "User cancelled the question",
+              is_error: true,
+            });
+            continue;
+          }
+
+          // Return answers to Claude in the expected format
+          toolResults.push({
+            type: "tool_result",
+            tool_use_id: toolId,
+            content: JSON.stringify({ questions, answers }),
+          });
+          continue;
+        }
 
         // Emit tool call event
         this.send({
