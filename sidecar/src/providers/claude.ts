@@ -33,6 +33,7 @@ export class ClaudeProvider implements SidecarProvider {
   private model = "claude-sonnet-4-6";
   private apiKey = "";
   private mcpBinaryPath = "";
+  private authMethod: "oauth" | "api_key" = "oauth";
   private abortController: AbortController | null = null;
   private pendingPermissions = new Map<string, (optionId: string) => void>();
   private pendingQuestions = new Map<string, (answers: Record<string, string>) => void>();
@@ -47,6 +48,7 @@ export class ClaudeProvider implements SidecarProvider {
     this.model = config.model || "claude-sonnet-4-6";
     this.apiKey = config.apiKey;
     this.mcpBinaryPath = config.mcpBinaryPath ?? "";
+    this.authMethod = config.authMethod ?? "oauth";
   }
 
   async prompt(
@@ -79,8 +81,13 @@ export class ClaudeProvider implements SidecarProvider {
             this.handlePermission(toolName, options.toolUseID)) as CanUseTool,
           env: {
             ...process.env,
-            ANTHROPIC_API_KEY: this.apiKey,
+            ...(this.authMethod === "api_key" && this.apiKey
+              ? { ANTHROPIC_API_KEY: this.apiKey }
+              : {}),
           },
+          settings: this.authMethod === "oauth"
+            ? { forceLoginMethod: "claudeai" as const }
+            : undefined,
           hooks: {
             PreToolUse: [{
               hooks: [this.createPreToolUseHook()],
@@ -174,6 +181,21 @@ export class ClaudeProvider implements SidecarProvider {
             this.send({ type: "error", message: errors.join("; ") });
           }
         }
+        break;
+      }
+      case "auth_status": {
+        const authMsg = message as unknown as {
+          type: "auth_status";
+          isAuthenticating: boolean;
+          output: string[];
+          error?: string;
+        };
+        this.send({
+          type: "auth_status",
+          is_authenticating: authMsg.isAuthenticating,
+          auth_url: authMsg.output?.find((line: string) => line.startsWith("http")) ?? null,
+          error: authMsg.error ?? null,
+        });
         break;
       }
     }
