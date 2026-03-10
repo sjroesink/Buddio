@@ -4,10 +4,11 @@
   "private": true,
   "type": "module",
   "scripts": {
-    "build": "esbuild src/index.ts --bundle --platform=node --target=node18 --outfile=dist/index.js --format=esm --banner:js=\"import{createRequire}from'module';const require=createRequire(import.meta.url);\"",
+    "build": "esbuild src/index.ts --bundle --platform=node --target=node18 --outfile=dist/index.js --format=esm --external:@anthropic-ai/claude-agent-sdk --banner:js=\"import{createRequire as __createRequire}from'module';const require=__createRequire(import.meta.url);\"",
     "dev": "tsx src/index.ts"
   },
   "dependencies": {
+    "@anthropic-ai/claude-agent-sdk": "^0.2.72",
     "@anthropic-ai/sdk": "^0.52.0",
     "@github/copilot-sdk": "^0.1.32",
     "@modelcontextprotocol/sdk": "^1.12.1",

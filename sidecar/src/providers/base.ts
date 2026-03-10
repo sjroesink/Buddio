@@ -14,6 +14,7 @@ export interface McpToolResult {
 export interface ProviderConfig {
   apiKey: string;
   model: string;
+  mcpBinaryPath?: string;
 }
 
 export type SendFn = (msg: OutgoingMessage) => void;

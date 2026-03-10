@@ -63,25 +63,33 @@ async function handleMessage(msg: IncomingMessage): Promise<void> {
         return;
       }
 
-      // Connect to MCP server
-      mcpConnection = new McpConnection();
-      let tools;
-      try {
-        tools = await mcpConnection.connect(msg.mcp_binary);
-        log(`Connected to MCP, ${tools.length} tools available`);
-      } catch (err) {
-        const message = err instanceof Error ? err.message : String(err);
-        send({ type: "error", message: `Failed to connect to MCP: ${message}` });
-        send({ type: "status_change", status: "error" });
-        return;
-      }
+      if (msg.provider === "claude") {
+        // Claude provider uses the Agent SDK which manages MCP connections internally
+        await provider.init(
+          { apiKey: msg.config.api_key, model: msg.config.model, mcpBinaryPath: msg.mcp_binary },
+          [],
+          send,
+        );
+      } else {
+        // Other providers use a shared MCP connection
+        mcpConnection = new McpConnection();
+        let tools;
+        try {
+          tools = await mcpConnection.connect(msg.mcp_binary);
+          log(`Connected to MCP, ${tools.length} tools available`);
+        } catch (err) {
+          const message = err instanceof Error ? err.message : String(err);
+          send({ type: "error", message: `Failed to connect to MCP: ${message}` });
+          send({ type: "status_change", status: "error" });
+          return;
+        }
 
-      // Initialize provider with tools
-      await provider.init(
-        { apiKey: msg.config.api_key, model: msg.config.model },
-        tools,
-        send,
-      );
+        await provider.init(
+          { apiKey: msg.config.api_key, model: msg.config.model },
+          tools,
+          send,
+        );
+      }
       send({ type: "status_change", status: "connected" });
       break;
     }
