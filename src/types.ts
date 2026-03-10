@@ -104,7 +104,7 @@ export interface RegistryAgent {
   required_env: RequiredEnvVar[];
 }
 
-export type ProviderKind = "acp" | "claude" | "copilot";
+export type ProviderKind = "acp" | "claude" | "copilot" | "codex";
 
 export interface AgentConfig {
   provider: ProviderKind;

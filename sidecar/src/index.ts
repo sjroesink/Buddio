@@ -3,6 +3,7 @@ import type { IncomingMessage, OutgoingMessage } from "./protocol.js";
 import type { SidecarProvider } from "./providers/base.js";
 import { ClaudeProvider } from "./providers/claude.js";
 import { CopilotProvider } from "./providers/copilot.js";
+import { CodexProvider } from "./providers/codex.js";
 import { McpConnection } from "./mcp.js";
 
 // --- JSON lines I/O ---
@@ -55,6 +56,8 @@ async function handleMessage(msg: IncomingMessage): Promise<void> {
         provider = new ClaudeProvider();
       } else if (msg.provider === "copilot") {
         provider = new CopilotProvider();
+      } else if (msg.provider === "codex") {
+        provider = new CodexProvider();
       } else {
         send({ type: "error", message: `Unknown provider: ${msg.provider}` });
         return;
@@ -100,32 +103,17 @@ async function handleMessage(msg: IncomingMessage): Promise<void> {
     }
 
     case "resolve_permission": {
-      if (provider && "resolvePermission" in provider) {
-        (provider as ClaudeProvider).resolvePermission(
-          msg.request_id,
-          msg.option_id,
-        );
-      }
+      provider?.resolvePermission?.(msg.request_id, msg.option_id);
       break;
     }
 
     case "resolve_question": {
-      if (provider && "resolveQuestion" in provider) {
-        (provider as ClaudeProvider).resolveQuestion(
-          msg.request_id,
-          msg.answers,
-        );
-      }
+      provider?.resolveQuestion?.(msg.request_id, msg.answers);
       break;
     }
 
     case "resolve_replace_selection": {
-      if (provider && "resolveReplacement" in provider) {
-        (provider as ClaudeProvider).resolveReplacement(
-          msg.request_id,
-          msg.success,
-        );
-      }
+      provider?.resolveReplacement?.(msg.request_id, msg.success);
       break;
     }
 

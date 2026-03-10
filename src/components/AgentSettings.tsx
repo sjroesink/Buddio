@@ -114,6 +114,8 @@ export function AgentSettings({
   const [claudeModel, setClaudeModel] = useState("claude-sonnet-4-20250514");
   const [copilotToken, setCopilotToken] = useState("");
   const [copilotModel, setCopilotModel] = useState("");
+  const [codexApiKey, setCodexApiKey] = useState("");
+  const [codexModel, setCodexModel] = useState("");
 
   // Load saved config, fetch registry, check installs
   useEffect(() => {
@@ -367,8 +369,7 @@ export function AgentSettings({
         api_key: claudeApiKey,
         model: claudeModel,
       };
-    } else {
-      // copilot
+    } else if (selectedProvider === "copilot") {
       if (!copilotToken) return;
       config = {
         provider: "copilot",
@@ -380,6 +381,20 @@ export function AgentSettings({
         auto_fallback: autoFallback,
         api_key: copilotToken,
         model: copilotModel,
+      };
+    } else {
+      // codex
+      if (!codexApiKey) return;
+      config = {
+        provider: "codex",
+        source: "sdk",
+        agent_id: "codex",
+        binary_path: "",
+        args: "",
+        env: "",
+        auto_fallback: autoFallback,
+        api_key: codexApiKey,
+        model: codexModel,
       };
     }
 
@@ -440,7 +455,9 @@ export function AgentSettings({
       ? selectedAgent && installStatus[selectedAgentId] !== false
       : selectedProvider === "claude"
         ? !!claudeApiKey
-        : !!copilotToken;
+        : selectedProvider === "copilot"
+          ? !!copilotToken
+          : !!codexApiKey;
 
   // ── Render sections ──
 
@@ -729,7 +746,37 @@ export function AgentSettings({
           />
         </div>
         <div className="text-[11px] text-white/40 px-1 mt-1">
-          Copilot provider is coming soon.
+          Requires GitHub Copilot CLI installed and authenticated.
+        </div>
+      </div>
+    );
+  }
+
+  function renderCodexSettings() {
+    return (
+      <div className="provider-settings">
+        <div className="agent-env-row">
+          <label className="agent-env-label">API Key:</label>
+          <input
+            type="password"
+            className="agent-env-input"
+            placeholder="sk-..."
+            value={codexApiKey}
+            onChange={(e) => setCodexApiKey(e.target.value)}
+          />
+        </div>
+        <div className="agent-env-row">
+          <label className="agent-env-label">Model:</label>
+          <input
+            type="text"
+            className="agent-env-input"
+            placeholder="Model ID (optional)"
+            value={codexModel}
+            onChange={(e) => setCodexModel(e.target.value)}
+          />
+        </div>
+        <div className="text-[11px] text-white/40 px-1 mt-1">
+          Codex uses its own built-in tools (shell, file edits, web search). Buddio MCP tools are not available with this provider.
         </div>
       </div>
     );
@@ -742,14 +789,14 @@ export function AgentSettings({
 
         {/* Provider selector */}
         <div className="provider-selector">
-          {(["acp", "claude", "copilot"] as ProviderKind[]).map((p) => (
+          {(["acp", "claude", "copilot", "codex"] as ProviderKind[]).map((p) => (
             <button
               key={p}
               className={`provider-tab ${selectedProvider === p ? "provider-tab-active" : ""}`}
               onClick={() => setSelectedProvider(p)}
               disabled={status === "connected" || status === "connecting"}
             >
-              {p === "acp" ? "ACP" : p === "claude" ? "Claude Code" : "Copilot"}
+              {p === "acp" ? "ACP" : p === "claude" ? "Claude" : p === "copilot" ? "Copilot" : "Codex"}
             </button>
           ))}
         </div>
@@ -758,6 +805,7 @@ export function AgentSettings({
         {selectedProvider === "acp" && renderAcpSettings()}
         {selectedProvider === "claude" && renderClaudeSettings()}
         {selectedProvider === "copilot" && renderCopilotSettings()}
+        {selectedProvider === "codex" && renderCodexSettings()}
 
         {/* Session Config Options - shown when connected */}
         {status === "connected" && configOptions.length > 0 && (
