@@ -15,6 +15,7 @@ export interface ProviderConfig {
   apiKey: string;
   model: string;
   mcpBinaryPath?: string;
+  authMethod?: "oauth" | "api_key";
 }
 
 export type SendFn = (msg: OutgoingMessage) => void;
