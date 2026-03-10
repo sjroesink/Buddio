@@ -236,6 +236,7 @@ pub fn save_agent_config(config: AgentConfig) -> Result<(), String> {
     db.set_setting("agent.provider", &config.provider)?;
     db.set_setting("agent.claude.api_key", &config.api_key)?;
     db.set_setting("agent.claude.model", &config.model)?;
+    db.set_setting("agent.claude.auth_method", &config.auth_method)?;
     Ok(())
 }
 
@@ -259,6 +260,9 @@ fn load_agent_config(db: &Database) -> Result<AgentConfig, String> {
         model: db
             .get_setting("agent.claude.model")?
             .unwrap_or_default(),
+        auth_method: db
+            .get_setting("agent.claude.auth_method")?
+            .unwrap_or_else(|| "oauth".to_string()),
     })
 }
 
