@@ -54,6 +54,7 @@ enum SidecarEvent {
         text: String,
     },
     AuthStatus {
+        #[allow(dead_code)]
         is_authenticating: bool,
         auth_url: Option<String>,
         error: Option<String>,

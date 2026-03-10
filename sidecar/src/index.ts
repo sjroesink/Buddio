@@ -100,13 +100,18 @@ async function handleMessage(msg: IncomingMessage): Promise<void> {
     }
 
     case "prompt": {
-      if (!provider || !mcpConnection) {
+      if (!provider) {
         send({ type: "error", message: "Not initialized" });
         return;
       }
 
-      const mcp = mcpConnection;
-      await provider.prompt(msg.text, (name, args) => mcp.callTool(name, args));
+      if (mcpConnection) {
+        const mcp = mcpConnection;
+        await provider.prompt(msg.text, (name, args) => mcp.callTool(name, args));
+      } else {
+        // Claude provider manages its own MCP connections via the Agent SDK
+        await provider.prompt(msg.text, async () => ({ content: "", isError: true }));
+      }
       break;
     }
 
