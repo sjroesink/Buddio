@@ -53,6 +53,11 @@ enum SidecarEvent {
         request_id: String,
         text: String,
     },
+    AuthStatus {
+        is_authenticating: bool,
+        auth_url: Option<String>,
+        error: Option<String>,
+    },
     Error {
         message: String,
     },
@@ -113,6 +118,7 @@ enum SidecarCommand {
 struct SidecarConfig {
     api_key: String,
     model: String,
+    auth_method: String,
 }
 
 /// Provider for Claude and Copilot SDKs via a Node.js sidecar process.
@@ -201,6 +207,7 @@ impl AgentProvider for SidecarProvider {
         let provider_name = self.provider_name.to_lowercase();
         let api_key = config.api_key.clone();
         let model = config.model.clone();
+        let auth_method = config.auth_method.clone();
         let app_clone = app.clone();
 
         // Spawn stdin writer task
@@ -241,6 +248,7 @@ impl AgentProvider for SidecarProvider {
                 config: SidecarConfig {
                     api_key,
                     model,
+                    auth_method,
                 },
                 mcp_binary,
             });
@@ -402,6 +410,20 @@ impl AgentProvider for SidecarProvider {
                                 success,
                             });
                         });
+                    }
+                    SidecarEvent::AuthStatus {
+                        auth_url,
+                        error,
+                        ..
+                    } => {
+                        if let Some(url) = &auth_url {
+                            if let Err(e) = open::that(url) {
+                                eprintln!("Failed to open auth URL: {e}");
+                            }
+                        }
+                        if let Some(err) = &error {
+                            eprintln!("Auth error: {err}");
+                        }
                     }
                     SidecarEvent::Error { message } => {
                         eprintln!("Sidecar error: {message}");
