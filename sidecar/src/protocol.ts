@@ -6,6 +6,7 @@ export interface InitMessage {
   config: {
     api_key: string;
     model: string;
+    auth_method: "oauth" | "api_key";
   };
   mcp_binary: string;
 }
@@ -120,6 +121,13 @@ export interface ReplaceSelectionRequestOut {
   text: string;
 }
 
+export interface AuthStatusOut {
+  type: "auth_status";
+  is_authenticating: boolean;
+  auth_url: string | null;
+  error: string | null;
+}
+
 export type OutgoingMessage =
   | StatusChangeOut
   | MessageChunkOut
@@ -130,4 +138,5 @@ export type OutgoingMessage =
   | UserQuestionOut
   | TurnCompleteOut
   | ErrorOut
-  | ReplaceSelectionRequestOut;
+  | ReplaceSelectionRequestOut
+  | AuthStatusOut;
