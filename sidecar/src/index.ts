@@ -66,7 +66,12 @@ async function handleMessage(msg: IncomingMessage): Promise<void> {
       if (msg.provider === "claude") {
         // Claude provider uses the Agent SDK which manages MCP connections internally
         await provider.init(
-          { apiKey: msg.config.api_key, model: msg.config.model, mcpBinaryPath: msg.mcp_binary },
+          {
+            apiKey: msg.config.api_key,
+            model: msg.config.model,
+            mcpBinaryPath: msg.mcp_binary,
+            authMethod: msg.config.auth_method,
+          },
           [],
           send,
         );
