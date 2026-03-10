@@ -61,6 +61,7 @@ export class ClaudeProvider implements SidecarProvider {
     this.abortController = new AbortController();
 
     const customServer = this.createCustomMcpServer();
+    let receivedResult = false;
 
     try {
       const q = query({
@@ -79,12 +80,15 @@ export class ClaudeProvider implements SidecarProvider {
           persistSession: false,
           canUseTool: ((toolName, _input, options) =>
             this.handlePermission(toolName, options.toolUseID)) as CanUseTool,
-          env: {
-            ...process.env,
-            ...(this.authMethod === "api_key" && this.apiKey
-              ? { ANTHROPIC_API_KEY: this.apiKey }
-              : {}),
-          },
+          env: (() => {
+            const env = { ...process.env };
+            // Remove CLAUDECODE to allow nested Claude Code subprocess
+            delete env.CLAUDECODE;
+            if (this.authMethod === "api_key" && this.apiKey) {
+              env.ANTHROPIC_API_KEY = this.apiKey;
+            }
+            return env;
+          })(),
           settings: this.authMethod === "oauth"
             ? { forceLoginMethod: "claudeai" as const }
             : undefined,
@@ -103,6 +107,7 @@ export class ClaudeProvider implements SidecarProvider {
       });
 
       for await (const message of q) {
+        if (message.type === "result") receivedResult = true;
         this.processMessage(message);
       }
 
@@ -110,6 +115,10 @@ export class ClaudeProvider implements SidecarProvider {
     } catch (err) {
       if (this.abortController?.signal.aborted) {
         this.send({ type: "turn_complete", stop_reason: "Cancelled" });
+      } else if (receivedResult) {
+        // SDK may throw after yielding a result (e.g. process exit code 1 during cleanup).
+        // The result message already handled any errors, so just complete the turn.
+        this.send({ type: "turn_complete", stop_reason: "end_turn" });
       } else {
         const message = err instanceof Error ? err.message : String(err);
         this.send({ type: "error", message });
