@@ -116,6 +116,7 @@ export interface AgentConfig {
   auto_fallback: boolean;
   api_key: string;
   model: string;
+  auth_method: "oauth" | "api_key";
 }
 
 // --- Launch context types ---

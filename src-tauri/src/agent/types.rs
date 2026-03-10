@@ -125,6 +125,12 @@ pub struct AgentConfig {
     pub api_key: String,
     #[serde(default)]
     pub model: String,
+    #[serde(default = "default_auth_method")]
+    pub auth_method: String,
+}
+
+fn default_auth_method() -> String {
+    "oauth".to_string()
 }
 
 // --- Session Config Option types (serializable mirror of ACP protocol types) ---
