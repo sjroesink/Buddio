@@ -306,7 +306,10 @@ export function useAgent() {
         if (provider === "acp" && !config.binary_path.trim()) {
           return;
         }
-        if ((provider === "claude" || provider === "copilot") && !config.api_key?.trim()) {
+        if (provider === "claude" && config.auth_method !== "oauth" && !config.api_key?.trim()) {
+          return;
+        }
+        if (provider === "copilot" && !config.api_key?.trim()) {
           return;
         }
 
