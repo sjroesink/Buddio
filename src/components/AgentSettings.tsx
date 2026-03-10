@@ -111,6 +111,7 @@ export function AgentSettings({
   // Provider selection state
   const [selectedProvider, setSelectedProvider] = useState<ProviderKind>("acp");
   const [claudeApiKey, setClaudeApiKey] = useState("");
+  const [claudeAuthMethod, setClaudeAuthMethod] = useState<"oauth" | "api_key">("oauth");
   const [claudeModel, setClaudeModel] = useState("claude-sonnet-4-20250514");
   const [copilotToken, setCopilotToken] = useState("");
   const [copilotModel, setCopilotModel] = useState("");
@@ -138,6 +139,9 @@ export function AgentSettings({
         // Restore provider settings
         setSelectedProvider((config.provider as ProviderKind) || "acp");
         setClaudeApiKey(config.api_key || "");
+        if (config.auth_method) {
+          setClaudeAuthMethod(config.auth_method as "oauth" | "api_key");
+        }
         setClaudeModel(config.model || "claude-sonnet-4-20250514");
 
         const installed = await invoke<Record<string, boolean>>(
@@ -343,6 +347,7 @@ export function AgentSettings({
         auto_fallback: autoFallback,
         api_key: "",
         model: "",
+        auth_method: "api_key",
       };
 
       try {
@@ -357,7 +362,7 @@ export function AgentSettings({
         console.error("Failed to save env vars:", e);
       }
     } else if (selectedProvider === "claude") {
-      if (!claudeApiKey) return;
+      if (claudeAuthMethod === "api_key" && !claudeApiKey) return;
       config = {
         provider: "claude",
         source: "sdk",
@@ -366,8 +371,9 @@ export function AgentSettings({
         args: "",
         env: "",
         auto_fallback: autoFallback,
-        api_key: claudeApiKey,
+        api_key: claudeAuthMethod === "api_key" ? claudeApiKey : "",
         model: claudeModel,
+        auth_method: claudeAuthMethod,
       };
     } else if (selectedProvider === "copilot") {
       if (!copilotToken) return;
@@ -381,6 +387,7 @@ export function AgentSettings({
         auto_fallback: autoFallback,
         api_key: copilotToken,
         model: copilotModel,
+        auth_method: "api_key",
       };
     } else {
       // codex
@@ -395,6 +402,7 @@ export function AgentSettings({
         auto_fallback: autoFallback,
         api_key: codexApiKey,
         model: codexModel,
+        auth_method: "api_key",
       };
     }
 
@@ -454,7 +462,7 @@ export function AgentSettings({
     selectedProvider === "acp"
       ? selectedAgent && installStatus[selectedAgentId] !== false
       : selectedProvider === "claude"
-        ? !!claudeApiKey
+        ? claudeAuthMethod === "oauth" || !!claudeApiKey
         : selectedProvider === "copilot"
           ? !!copilotToken
           : !!codexApiKey;
@@ -697,15 +705,28 @@ export function AgentSettings({
     return (
       <div className="provider-settings">
         <div className="agent-env-row">
-          <label className="agent-env-label">API Key:</label>
-          <input
-            type="password"
-            className="agent-env-input"
-            placeholder="sk-ant-..."
-            value={claudeApiKey}
-            onChange={(e) => setClaudeApiKey(e.target.value)}
-          />
+          <label className="agent-env-label">Auth:</label>
+          <select
+            className="config-option-select"
+            value={claudeAuthMethod}
+            onChange={(e) => setClaudeAuthMethod(e.target.value as "oauth" | "api_key")}
+          >
+            <option value="oauth">Claude Account (OAuth)</option>
+            <option value="api_key">API Key</option>
+          </select>
         </div>
+        {claudeAuthMethod === "api_key" && (
+          <div className="agent-env-row">
+            <label className="agent-env-label">API Key:</label>
+            <input
+              type="password"
+              className="agent-env-input"
+              placeholder="sk-ant-..."
+              value={claudeApiKey}
+              onChange={(e) => setClaudeApiKey(e.target.value)}
+            />
+          </div>
+        )}
         <div className="agent-env-row">
           <label className="agent-env-label">Model:</label>
           <select
@@ -718,6 +739,11 @@ export function AgentSettings({
             <option value="claude-haiku-4-20250506">Claude Haiku 4</option>
           </select>
         </div>
+        {claudeAuthMethod === "oauth" && (
+          <div className="text-[11px] text-white/40 px-1 mt-1">
+            Signs in with your Claude Pro/Max subscription. A browser window will open on first connect.
+          </div>
+        )}
       </div>
     );
   }
