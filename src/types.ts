@@ -65,6 +65,26 @@ export interface PermissionOption {
   kind: string;
 }
 
+// --- User Question types (AskUserQuestion from Claude) ---
+
+export interface UserQuestionRequest {
+  request_id: string;
+  tool_use_id: string;
+  questions: UserQuestionItem[];
+}
+
+export interface UserQuestionItem {
+  question: string;
+  header: string;
+  options: UserQuestionOption[];
+  multi_select: boolean;
+}
+
+export interface UserQuestionOption {
+  label: string;
+  description: string;
+}
+
 export interface RequiredEnvVar {
   name: string;
   description: string;
@@ -84,13 +104,19 @@ export interface RegistryAgent {
   required_env: RequiredEnvVar[];
 }
 
+export type ProviderKind = "acp" | "claude" | "copilot" | "codex";
+
 export interface AgentConfig {
+  provider: ProviderKind;
   source: string;
   agent_id: string;
   binary_path: string;
   args: string;
   env: string;
   auto_fallback: boolean;
+  api_key: string;
+  model: string;
+  auth_method: "oauth" | "api_key";
 }
 
 // --- Launch context types ---
