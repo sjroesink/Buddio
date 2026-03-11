@@ -9,6 +9,7 @@ import type {
   AgentThreadMessage,
   ConversationWithPreview,
   SessionConfigOptionInfo,
+  UserQuestionRequest,
 } from "../types";
 
 function makeMessageId(prefix: "user" | "assistant") {
@@ -64,7 +65,7 @@ function normalizeToolStatus(
   return null;
 }
 
-export function useAcpAgent() {
+export function useAgent() {
   const [status, setStatus] = useState<AgentStatus>("disconnected");
   const [errorMessage, setErrorMessage] = useState<string | null>(null);
   const [messages, setMessages] = useState("");
@@ -74,6 +75,8 @@ export function useAcpAgent() {
   const [turnActive, setTurnActive] = useState(false);
   const [permissionRequest, setPermissionRequest] =
     useState<PermissionRequest | null>(null);
+  const [userQuestion, setUserQuestion] =
+    useState<UserQuestionRequest | null>(null);
   const activeAssistantIdRef = useRef<string | null>(null);
   const startupConnectAttempted = useRef(false);
 
@@ -97,7 +100,7 @@ export function useAcpAgent() {
   activeConversationIdRef.current = activeConversationId;
 
   useEffect(() => {
-    const unlistenUpdate = listen<AgentUpdate>("acp-update", (event) => {
+    const unlistenUpdate = listen<AgentUpdate>("agent-update", (event) => {
       const update = event.payload;
 
       switch (update.type) {
@@ -217,7 +220,7 @@ export function useAcpAgent() {
     });
 
     const unlistenPermission = listen<PermissionRequest>(
-      "acp-permission-request",
+      "agent-permission-request",
       (event) => {
         const req = event.payload;
         setPermissionRequest(req);
@@ -238,8 +241,15 @@ export function useAcpAgent() {
       },
     );
 
+    const unlistenUserQuestion = listen<UserQuestionRequest>(
+      "agent-user-question",
+      (event) => {
+        setUserQuestion(event.payload);
+      },
+    );
+
     const unlistenConfigOptions = listen<SessionConfigOptionInfo[]>(
-      "acp-config-options",
+      "agent-config-options",
       (event) => {
         setConfigOptions(event.payload);
       },
@@ -248,6 +258,7 @@ export function useAcpAgent() {
     return () => {
       unlistenUpdate.then((f) => f());
       unlistenPermission.then((f) => f());
+      unlistenUserQuestion.then((f) => f());
       unlistenConfigOptions.then((f) => f());
     };
   }, []);
@@ -256,10 +267,10 @@ export function useAcpAgent() {
     try {
       setStatus("connecting");
       setErrorMessage(null);
-      await invoke("acp_connect", { config });
+      await invoke("agent_connect", { config });
       // Fetch initial config options after connect
       const opts = await invoke<SessionConfigOptionInfo[]>(
-        "acp_get_config_options",
+        "agent_get_config_options",
       );
       setConfigOptions(opts);
     } catch (e) {
@@ -275,13 +286,13 @@ export function useAcpAgent() {
 
     async function connectOnStartup() {
       try {
-        const currentStatus = await invoke<AgentStatus>("acp_get_status");
+        const currentStatus = await invoke<AgentStatus>("agent_get_status");
         setStatus(currentStatus);
 
         if (currentStatus === "connected" || currentStatus === "connecting") {
           if (currentStatus === "connected") {
             const opts = await invoke<SessionConfigOptionInfo[]>(
-              "acp_get_config_options",
+              "agent_get_config_options",
             );
             setConfigOptions(opts);
           }
@@ -290,7 +301,15 @@ export function useAcpAgent() {
 
         const config = await invoke<AgentConfig>("get_agent_config");
 
-        if (!config.binary_path.trim()) {
+        // Check provider-specific requirements before auto-connecting
+        const provider = config.provider || "acp";
+        if (provider === "acp" && !config.binary_path.trim()) {
+          return;
+        }
+        if (provider === "claude" && config.auth_method !== "oauth" && !config.api_key?.trim()) {
+          return;
+        }
+        if (provider === "copilot" && !config.api_key?.trim()) {
           return;
         }
 
@@ -330,7 +349,7 @@ export function useAcpAgent() {
 
   const disconnect = useCallback(async () => {
     try {
-      await invoke("acp_disconnect");
+      await invoke("agent_disconnect");
     } catch (e) {
       console.error("Failed to disconnect agent:", e);
     }
@@ -422,7 +441,7 @@ export function useAcpAgent() {
     async (query: string) => {
       await startTurn(query, async (normalizedQuery) => {
         const items = await invoke("get_all_items");
-        await invoke("acp_prompt", {
+        await invoke("agent_prompt", {
           query: normalizedQuery,
           contextItems: items,
         });
@@ -434,7 +453,7 @@ export function useAcpAgent() {
   const promptSlashCommand = useCallback(
     async (query: string) => {
       await startTurn(query, async (normalizedQuery) => {
-        await invoke("acp_prompt_slash_command", {
+        await invoke("agent_prompt_slash_command", {
           query: normalizedQuery,
         });
       });
@@ -444,7 +463,7 @@ export function useAcpAgent() {
 
   const cancel = useCallback(async () => {
     try {
-      await invoke("acp_cancel");
+      await invoke("agent_cancel");
       setTurnActive(false);
       setIsThinking(false);
       activeAssistantIdRef.current = null;
@@ -466,7 +485,7 @@ export function useAcpAgent() {
   const resolvePermission = useCallback(
     async (requestId: string, optionId: string) => {
       try {
-        await invoke("acp_resolve_permission", { requestId, optionId });
+        await invoke("agent_resolve_permission", { requestId, optionId });
         setPermissionRequest(null);
 
         // Mark the tool call entry as approved (or denied based on optionId)
@@ -480,6 +499,18 @@ export function useAcpAgent() {
         );
       } catch (e) {
         console.error("Failed to resolve permission:", e);
+      }
+    },
+    [],
+  );
+
+  const resolveQuestion = useCallback(
+    async (requestId: string, answers: Record<string, string>) => {
+      try {
+        await invoke("agent_resolve_question", { requestId, answers });
+        setUserQuestion(null);
+      } catch (e) {
+        console.error("Failed to resolve question:", e);
       }
     },
     [],
@@ -568,7 +599,7 @@ export function useAcpAgent() {
     async (configId: string, value: string) => {
       try {
         const updated = await invoke<SessionConfigOptionInfo[]>(
-          "acp_set_config_option",
+          "agent_set_config_option",
           { configId, value },
         );
         setConfigOptions(updated);
@@ -588,6 +619,7 @@ export function useAcpAgent() {
     isThinking,
     turnActive,
     permissionRequest,
+    userQuestion,
     activeConversationId,
     conversations,
     configOptions,
@@ -598,6 +630,7 @@ export function useAcpAgent() {
     cancel,
     clearThread,
     resolvePermission,
+    resolveQuestion,
     loadConversations,
     loadConversation,
     newConversation,

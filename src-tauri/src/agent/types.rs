@@ -88,14 +88,49 @@ pub struct PermissionOptionInfo {
     pub kind: String,
 }
 
+// --- User Question types (AskUserQuestion from Claude) ---
+
+#[derive(Debug, Clone, Serialize, Deserialize)]
+pub struct UserQuestionRequest {
+    pub request_id: String,
+    pub tool_use_id: String,
+    pub questions: Vec<UserQuestionItem>,
+}
+
+#[derive(Debug, Clone, Serialize, Deserialize)]
+pub struct UserQuestionItem {
+    pub question: String,
+    pub header: String,
+    pub options: Vec<UserQuestionOption>,
+    pub multi_select: bool,
+}
+
+#[derive(Debug, Clone, Serialize, Deserialize)]
+pub struct UserQuestionOption {
+    pub label: String,
+    pub description: String,
+}
+
 #[derive(Debug, Clone, Serialize, Deserialize, Default)]
 pub struct AgentConfig {
+    #[serde(default)]
+    pub provider: String,
     pub source: String,
     pub agent_id: String,
     pub binary_path: String,
     pub args: String,
     pub env: String,
     pub auto_fallback: bool,
+    #[serde(default)]
+    pub api_key: String,
+    #[serde(default)]
+    pub model: String,
+    #[serde(default = "default_auth_method")]
+    pub auth_method: String,
+}
+
+fn default_auth_method() -> String {
+    "oauth".to_string()
 }
 
 // --- Session Config Option types (serializable mirror of ACP protocol types) ---

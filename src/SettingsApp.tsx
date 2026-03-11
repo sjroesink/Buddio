@@ -19,13 +19,13 @@ function SettingsApp() {
 
   // Sync agent status from backend on mount + listen for changes
   useEffect(() => {
-    invoke<AgentStatus>("acp_get_status").then(setStatus).catch(() => {});
+    invoke<AgentStatus>("agent_get_status").then(setStatus).catch(() => {});
 
-    invoke<SessionConfigOptionInfo[]>("acp_get_config_options")
+    invoke<SessionConfigOptionInfo[]>("agent_get_config_options")
       .then(setConfigOptions)
       .catch(() => {});
 
-    const unlistenUpdate = listen<AgentUpdate>("acp-update", (event) => {
+    const unlistenUpdate = listen<AgentUpdate>("agent-update", (event) => {
       if (event.payload.type === "status_change") {
         setStatus(event.payload.status);
         if (event.payload.status !== "error") setErrorMessage(null);
@@ -33,7 +33,7 @@ function SettingsApp() {
     });
 
     const unlistenConfig = listen<SessionConfigOptionInfo[]>(
-      "acp-config-options",
+      "agent-config-options",
       (event) => {
         setConfigOptions(event.payload);
       },
@@ -49,9 +49,9 @@ function SettingsApp() {
     try {
       setStatus("connecting");
       setErrorMessage(null);
-      await invoke("acp_connect", { config });
+      await invoke("agent_connect", { config });
       const opts = await invoke<SessionConfigOptionInfo[]>(
-        "acp_get_config_options",
+        "agent_get_config_options",
       );
       setConfigOptions(opts);
     } catch (e) {
@@ -63,7 +63,7 @@ function SettingsApp() {
 
   const handleDisconnect = useCallback(async () => {
     try {
-      await invoke("acp_disconnect");
+      await invoke("agent_disconnect");
       setStatus("disconnected");
       setErrorMessage(null);
       setConfigOptions([]);
@@ -80,7 +80,7 @@ function SettingsApp() {
     async (configId: string, value: string) => {
       try {
         const updated = await invoke<SessionConfigOptionInfo[]>(
-          "acp_set_config_option",
+          "agent_set_config_option",
           { configId, value },
         );
         setConfigOptions(updated);

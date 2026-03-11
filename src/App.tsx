@@ -2,7 +2,7 @@ import { useEffect, useRef, useState, useCallback } from "react";
 import { invoke } from "@tauri-apps/api/core";
 import { listen } from "@tauri-apps/api/event";
 import { useLauncher } from "./hooks/useLauncher";
-import { useAcpAgent } from "./hooks/useAcpAgent";
+import { useAgent } from "./hooks/useAgent";
 import { useLaunchContext } from "./hooks/useLaunchContext";
 import SearchBar, { type PastedImage } from "./components/SearchBar";
 import CategoryBar from "./components/CategoryBar";
@@ -32,7 +32,7 @@ function App() {
   const [contextPanelOpen, setContextPanelOpen] = useState(false);
   const containerRef = useRef<HTMLDivElement>(null);
 
-  const agent = useAcpAgent();
+  const agent = useAgent();
   const launchCtx = useLaunchContext();
 
   const handleExecuteSuccess = useCallback(async (output?: string | null) => {
@@ -530,7 +530,9 @@ function App() {
               isThinking={agent.isThinking}
               turnActive={agent.turnActive}
               permissionRequest={agent.permissionRequest}
+              userQuestion={agent.userQuestion}
               onResolvePermission={agent.resolvePermission}
+              onResolveQuestion={agent.resolveQuestion}
               onNewConversation={handleNewConversation}
               onShowHistory={handleShowHistory}
               hasSelection={launchCtx.hasSelection}
