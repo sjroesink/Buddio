@@ -30,7 +30,9 @@ jobs:
         id: version
         shell: bash
         run: |
-          VERSION="0.1.$(date -u +'%Y%m%d%H%M%S')"
+          DAYS=$(( ($(date -u +%s) - $(date -u -d '2025-01-01' +%s)) / 86400 ))
+          MINS=$(( $(date -u +%-H) * 60 + $(date -u +%-M) ))
+          VERSION="0.${DAYS}.${MINS}"
           echo "version=$VERSION" >> "$GITHUB_OUTPUT"
           echo "Generated version: $VERSION"
 
