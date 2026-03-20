@@ -18,10 +18,13 @@ import { RewriteQuickActions } from "./components/RewriteQuickActions";
 import { CommandOutput } from "./components/CommandOutput";
 import { ContextPanel } from "./components/ContextPanel";
 import { Toast, type ToastData } from "./components/Toast";
+import { UpdateToast } from "./components/UpdateToast";
+import { useUpdateChecker } from "./hooks/useUpdateChecker";
 
 
 function App() {
   const [autoFallback, setAutoFallback] = useState(false);
+  const [autoUpdate, setAutoUpdate] = useState(false);
   const [showHistory, setShowHistory] = useState(false);
   const [forceAgentMode, setForceAgentMode] = useState(false);
   const [historySelectedIndex, setHistorySelectedIndex] = useState(0);
@@ -34,6 +37,7 @@ function App() {
 
   const agent = useAgent();
   const launchCtx = useLaunchContext();
+  const updater = useUpdateChecker({ autoUpdate });
 
   const handleExecuteSuccess = useCallback(async (output?: string | null) => {
     if (output) {
@@ -69,42 +73,16 @@ function App() {
     onExecuteError: handleExecuteError,
   });
 
-  // Load auto_fallback setting on mount
+  // Load settings on mount
   useEffect(() => {
     invoke<string | null>("get_setting", { key: "acp.auto_fallback" })
       .then((val) => setAutoFallback(val === "true"))
       .catch(() => {});
-  }, []);
-
-  // Check for updates on startup if enabled
-  useEffect(() => {
     invoke<string | null>("get_setting", { key: "app.auto_update" })
-      .then(async (val) => {
-        if (val !== "true") return;
-        try {
-          const result = await invoke<{ version: string; body: string | null } | null>(
-            "check_for_update",
-          );
-          if (result) {
-            setToast({
-              message: `Update v${result.version} available`,
-              type: "info",
-              action: {
-                label: "Update",
-                onClick: () => {
-                  invoke("install_update").catch((e) =>
-                    setToast({ message: String(e), type: "error" }),
-                  );
-                },
-              },
-            });
-          }
-        } catch {
-          // Silently ignore update check failures on startup
-        }
-      })
+      .then((val) => setAutoUpdate(val === "true"))
       .catch(() => {});
   }, []);
+
 
   useEffect(() => {
     containerRef.current?.focus();
@@ -512,6 +490,14 @@ function App() {
       onKeyDown={handleContainerKeyDown}
       tabIndex={0}
     >
+      {updater.visible && (
+        <UpdateToast
+          state={updater.state}
+          onInstall={updater.installUpdate}
+          onRestart={updater.restartApp}
+          onDismiss={updater.dismiss}
+        />
+      )}
       {isAgentInputMode ? (
         <>
           {showConversationHistory ? (
