@@ -32,14 +32,15 @@
   "plugins": {
     "updater": {
       "endpoints": [
-        "https://github.com/sjroesink/Buddio/releases/latest/download/latest.json"
+        "https://github.com/sjroesink/buddio/releases/latest/download/latest.json"
       ],
-      "pubkey": ""
+      "pubkey": "dW50cnVzdGVkIGNvbW1lbnQ6IG1pbmlzaWduIHB1YmxpYyBrZXk6IEY1REYxQTBDMTMyOUVCRjIKUldUeTZ5a1REQnJmOWZmN2ZXVmF6WGlsakNVcVJEZGlRVjN6VXJ2cElad3hHanp4SUY5aHRVY1YK"
     }
   },
   "bundle": {
     "active": true,
     "targets": "all",
+    "createUpdaterArtifacts": true,
     "icon": [
       "icons/32x32.png",
       "icons/128x128.png",
