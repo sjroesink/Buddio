@@ -166,14 +166,12 @@ impl AgentProvider for SidecarProvider {
         );
 
         // Find Node.js
-        if !super::registry::check_command_available("node") {
+        let node_bin = find_node().ok_or_else(|| {
             self.status = AgentStatus::Error;
-            return Err(
-                "Node.js is required for Claude/Copilot providers but was not found on PATH. \
-                 Please install Node.js (https://nodejs.org/) and try again."
-                    .to_string(),
-            );
-        }
+            "Node.js is required for Claude/Copilot providers but was not found on PATH. \
+             Please install Node.js (https://nodejs.org/) and try again."
+                .to_string()
+        })?;
 
         // Resolve sidecar script path — look next to the executable first,
         // then fall back to a development path relative to the project root.
@@ -185,7 +183,7 @@ impl AgentProvider for SidecarProvider {
             .to_string();
 
         // Spawn Node.js sidecar process
-        let mut cmd = tokio::process::Command::new("node");
+        let mut cmd = tokio::process::Command::new(&node_bin);
         cmd.arg(&sidecar_script);
         cmd.stdin(std::process::Stdio::piped())
             .stdout(std::process::Stdio::piped())
@@ -525,6 +523,53 @@ impl AgentProvider for SidecarProvider {
     ) -> Result<Vec<SessionConfigOptionInfo>, String> {
         Ok(Vec::new())
     }
+}
+
+/// Find the Node.js binary. Checks PATH first, then common install locations on Windows.
+fn find_node() -> Option<String> {
+    // 1. Check PATH via `where` (Windows) or `which` (Unix)
+    if super::registry::check_command_available("node") {
+        return Some("node".to_string());
+    }
+
+    // 2. On Windows, check common install locations
+    #[cfg(target_os = "windows")]
+    {
+        // Default installer location
+        let program_files = std::path::PathBuf::from(r"C:\Program Files\nodejs\node.exe");
+        if program_files.exists() {
+            return Some(program_files.to_string_lossy().to_string());
+        }
+
+        // fnm: look for node.exe inside fnm_multishells/*/
+        if let Ok(local_app_data) = std::env::var("LOCALAPPDATA") {
+            let fnm_dir = std::path::PathBuf::from(&local_app_data).join("fnm_multishells");
+            if fnm_dir.exists() {
+                if let Ok(entries) = std::fs::read_dir(&fnm_dir) {
+                    for entry in entries.flatten() {
+                        let node_path = entry.path().join("node.exe");
+                        if node_path.exists() {
+                            return Some(node_path.to_string_lossy().to_string());
+                        }
+                    }
+                }
+            }
+        }
+
+        // nvm-windows: check NVM_SYMLINK, then common nvm4w location
+        if let Ok(nvm_symlink) = std::env::var("NVM_SYMLINK") {
+            let node_path = std::path::PathBuf::from(&nvm_symlink).join("node.exe");
+            if node_path.exists() {
+                return Some(node_path.to_string_lossy().to_string());
+            }
+        }
+        let nvm4w = std::path::PathBuf::from(r"C:\nvm4w\nodejs\node.exe");
+        if nvm4w.exists() {
+            return Some(nvm4w.to_string_lossy().to_string());
+        }
+    }
+
+    None
 }
 
 /// Resolve the path to the sidecar `dist/index.js` script.
