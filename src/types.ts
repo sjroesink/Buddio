@@ -104,7 +104,7 @@ export interface RegistryAgent {
   required_env: RequiredEnvVar[];
 }
 
-export type ProviderKind = "acp" | "claude" | "copilot" | "codex";
+export type ProviderKind = "acp" | "claude" | "copilot" | "codex" | "ollama";
 
 export interface AgentConfig {
   provider: ProviderKind;
@@ -117,6 +117,8 @@ export interface AgentConfig {
   api_key: string;
   model: string;
   auth_method: "oauth" | "api_key";
+  ollama_url: string;
+  ollama_model: string;
 }
 
 // --- Launch context types ---

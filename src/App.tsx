@@ -23,7 +23,6 @@ import { useUpdateChecker } from "./hooks/useUpdateChecker";
 
 
 function App() {
-  const [autoFallback, setAutoFallback] = useState(false);
   const [autoUpdate, setAutoUpdate] = useState(false);
   const [showHistory, setShowHistory] = useState(false);
   const [forceAgentMode, setForceAgentMode] = useState(false);
@@ -63,7 +62,7 @@ function App() {
 
   const launcher = useLauncher({
     agentStatus: agent.status,
-    agentAutoFallback: autoFallback,
+    agentAutoFallback: true,
     onAgentPrompt: handleAutoFallbackPrompt,
     onSlashCommandCreate: agent.promptSlashCommand,
     onAgentCancel: agent.cancel,
@@ -75,9 +74,6 @@ function App() {
 
   // Load settings on mount
   useEffect(() => {
-    invoke<string | null>("get_setting", { key: "acp.auto_fallback" })
-      .then((val) => setAutoFallback(val === "true"))
-      .catch(() => {});
     invoke<string | null>("get_setting", { key: "app.auto_update" })
       .then((val) => setAutoUpdate(val === "true"))
       .catch(() => {});
@@ -103,6 +99,7 @@ function App() {
       resizable: false,
       decorations: false,
       transparent: true,
+      alwaysOnTop: true,
     });
   }, []);
 
@@ -122,6 +119,7 @@ function App() {
   useEffect(() => {
     const unlisten = listen("launcher-reset", () => {
       launcher.reset();
+      launchCtx.clearContext();
       setShowHistory(false);
       setForceAgentMode(false);
       setHistorySelectedIndex(0);
@@ -140,7 +138,7 @@ function App() {
     return () => {
       unlisten.then((fn) => fn());
     };
-  }, [launcher, agent]);
+  }, [launcher, launchCtx, agent]);
 
   // Open settings on backend event (e.g. tray menu action)
   useEffect(() => {
@@ -657,6 +655,7 @@ function App() {
                     selectedIndex={launcher.selectedIndex}
                     onSelect={launcher.setSelectedIndex}
                     onExecute={launcher.executeSelected}
+                    onItemDeleted={launcher.refresh}
                   />
                 ) : null)}
 

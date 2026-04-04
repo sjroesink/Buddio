@@ -30,6 +30,7 @@ pub struct HotkeyState(pub StdMutex<hotkey::HotkeyManager>);
 
 const TRAY_OPEN_LAUNCHER_ID: &str = "tray_open_launcher";
 const TRAY_OPEN_SETTINGS_ID: &str = "tray_open_settings";
+const TRAY_QUIT_ID: &str = "tray_quit";
 
 fn show_launcher_from_tray(app: &tauri::AppHandle, open_settings: bool) {
     hotkey::show_launcher(app);
@@ -47,6 +48,7 @@ pub fn run() {
         .plugin(tauri_plugin_process::init())
         .invoke_handler(tauri::generate_handler![
             search_items,
+            delete_item,
             get_all_items,
             execute_item,
             get_categories,
@@ -101,6 +103,7 @@ pub fn run() {
             set_shortcut_mode,
             check_for_update,
             install_update,
+            ollama_list_models,
         ])
         .setup(|app| {
             let handle = app.handle().clone();
@@ -117,6 +120,8 @@ pub fn run() {
             let tray_menu = MenuBuilder::new(app)
                 .text(TRAY_OPEN_LAUNCHER_ID, "Launcher openen")
                 .text(TRAY_OPEN_SETTINGS_ID, "Settings openen")
+                .separator()
+                .text(TRAY_QUIT_ID, "Afsluiten")
                 .build()?;
 
             let mut tray_builder = TrayIconBuilder::with_id("buddio-tray")
@@ -128,6 +133,8 @@ pub fn run() {
                         show_launcher_from_tray(app, false);
                     } else if event.id() == TRAY_OPEN_SETTINGS_ID {
                         show_launcher_from_tray(app, true);
+                    } else if event.id() == TRAY_QUIT_ID {
+                        app.exit(0);
                     }
                 })
                 .on_tray_icon_event(|tray, event| {

@@ -11,6 +11,7 @@ pub enum ProviderKind {
     Claude,
     Copilot,
     Codex,
+    Ollama,
 }
 
 impl ProviderKind {
@@ -19,6 +20,7 @@ impl ProviderKind {
             "claude" => Self::Claude,
             "copilot" => Self::Copilot,
             "codex" => Self::Codex,
+            "ollama" => Self::Ollama,
             _ => Self::Acp,
         }
     }

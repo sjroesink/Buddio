@@ -91,12 +91,14 @@ impl AgentProvider for AcpProvider {
         // that cannot be spawned directly. We run them through PowerShell.
         #[cfg(target_os = "windows")]
         let mut cmd = {
+            const CREATE_NO_WINDOW: u32 = 0x08000000;
             let mut c = tokio::process::Command::new("powershell");
             let invoke = std::iter::once(format!("& '{}'", resolved_binary))
                 .chain(args.iter().map(|a| format!("'{}'", a.replace('\'', "''"))))
                 .collect::<Vec<_>>()
                 .join(" ");
             c.args(["-NoProfile", "-Command", &invoke]);
+            c.creation_flags(CREATE_NO_WINDOW);
             c
         };
         #[cfg(not(target_os = "windows"))]

@@ -127,10 +127,18 @@ pub struct AgentConfig {
     pub model: String,
     #[serde(default = "default_auth_method")]
     pub auth_method: String,
+    #[serde(default = "default_ollama_url")]
+    pub ollama_url: String,
+    #[serde(default)]
+    pub ollama_model: String,
 }
 
 fn default_auth_method() -> String {
     "oauth".to_string()
+}
+
+fn default_ollama_url() -> String {
+    "http://localhost:11434".to_string()
 }
 
 // --- Session Config Option types (serializable mirror of ACP protocol types) ---

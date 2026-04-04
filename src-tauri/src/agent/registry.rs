@@ -99,11 +99,16 @@ fn check_npm_package_installed(package: &str) -> bool {
     };
 
     #[cfg(target_os = "windows")]
-    let result = std::process::Command::new("powershell")
-        .args(["-NoProfile", "-Command", "npm list -g --depth=0"])
-        .stdout(std::process::Stdio::piped())
-        .stderr(std::process::Stdio::null())
-        .output();
+    let result = {
+        use std::os::windows::process::CommandExt;
+        const CREATE_NO_WINDOW: u32 = 0x08000000;
+        std::process::Command::new("powershell")
+            .args(["-NoProfile", "-Command", "npm list -g --depth=0"])
+            .stdout(std::process::Stdio::piped())
+            .stderr(std::process::Stdio::null())
+            .creation_flags(CREATE_NO_WINDOW)
+            .output()
+    };
 
     #[cfg(not(target_os = "windows"))]
     let result = std::process::Command::new("npm")
@@ -147,10 +152,13 @@ fn check_agent_installed_locally(agent_id: &str, binary_name: &str) -> bool {
 pub fn check_command_available(cmd: &str) -> bool {
     #[cfg(target_os = "windows")]
     {
+        use std::os::windows::process::CommandExt;
+        const CREATE_NO_WINDOW: u32 = 0x08000000;
         std::process::Command::new("where")
             .arg(cmd)
             .stdout(std::process::Stdio::null())
             .stderr(std::process::Stdio::null())
+            .creation_flags(CREATE_NO_WINDOW)
             .status()
             .map(|s| s.success())
             .unwrap_or(false)

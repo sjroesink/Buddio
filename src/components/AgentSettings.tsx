@@ -91,7 +91,7 @@ export function AgentSettings({
     {},
   );
   const [selectedAgentId, setSelectedAgentId] = useState("");
-  const [autoFallback, setAutoFallback] = useState(false);
+
   const [agentEnvValues, setAgentEnvValues] = useState<
     Record<string, Record<string, string>>
   >({});
@@ -109,7 +109,7 @@ export function AgentSettings({
   const recorderRef = useRef<HTMLDivElement>(null);
 
   // Provider selection state
-  const [selectedProvider, setSelectedProvider] = useState<ProviderKind>("acp");
+  const [selectedProvider, setSelectedProvider] = useState<ProviderKind>("ollama");
   const [claudeApiKey, setClaudeApiKey] = useState("");
   const [claudeAuthMethod, setClaudeAuthMethod] = useState<"oauth" | "api_key">("oauth");
   const [claudeModel, setClaudeModel] = useState("claude-sonnet-4-20250514");
@@ -117,6 +117,11 @@ export function AgentSettings({
   const [copilotModel, setCopilotModel] = useState("");
   const [codexApiKey, setCodexApiKey] = useState("");
   const [codexModel, setCodexModel] = useState("");
+  const [ollamaUrl, setOllamaUrl] = useState("http://localhost:11434");
+  const [ollamaModel, setOllamaModel] = useState("");
+  const [ollamaModels, setOllamaModels] = useState<{ name: string; size: number }[]>([]);
+  const [ollamaLoading, setOllamaLoading] = useState(false);
+  const [ollamaError, setOllamaError] = useState<string | null>(null);
 
   // Load saved config, fetch registry, check installs
   useEffect(() => {
@@ -133,16 +138,18 @@ export function AgentSettings({
         setShortcutMode(mode);
         setAutoUpdate(autoUpdateVal === "true");
         setSelectedAgentId(config.agent_id);
-        setAutoFallback(config.auto_fallback);
+
         setAgents(registryAgents);
 
         // Restore provider settings
-        setSelectedProvider((config.provider as ProviderKind) || "acp");
+        setSelectedProvider((config.provider as ProviderKind) || "ollama");
         setClaudeApiKey(config.api_key || "");
         if (config.auth_method) {
           setClaudeAuthMethod(config.auth_method as "oauth" | "api_key");
         }
         setClaudeModel(config.model || "claude-sonnet-4-20250514");
+        setOllamaUrl(config.ollama_url || "http://localhost:11434");
+        setOllamaModel(config.ollama_model || "");
 
         const installed = await invoke<Record<string, boolean>>(
           "acp_check_agents_installed",
@@ -344,10 +351,12 @@ export function AgentSettings({
         binary_path: binaryPath,
         args,
         env: envString,
-        auto_fallback: autoFallback,
+        auto_fallback: true,
         api_key: "",
         model: "",
         auth_method: "api_key",
+        ollama_url: "",
+        ollama_model: "",
       };
 
       try {
@@ -370,10 +379,12 @@ export function AgentSettings({
         binary_path: "",
         args: "",
         env: "",
-        auto_fallback: autoFallback,
+        auto_fallback: true,
         api_key: claudeAuthMethod === "api_key" ? claudeApiKey : "",
         model: claudeModel,
         auth_method: claudeAuthMethod,
+        ollama_url: "",
+        ollama_model: "",
       };
     } else if (selectedProvider === "copilot") {
       if (!copilotToken) return;
@@ -384,10 +395,28 @@ export function AgentSettings({
         binary_path: "",
         args: "",
         env: "",
-        auto_fallback: autoFallback,
+        auto_fallback: true,
         api_key: copilotToken,
         model: copilotModel,
         auth_method: "api_key",
+        ollama_url: "",
+        ollama_model: "",
+      };
+    } else if (selectedProvider === "ollama") {
+      if (!ollamaModel) return;
+      config = {
+        provider: "ollama",
+        source: "local",
+        agent_id: "ollama",
+        binary_path: "",
+        args: "",
+        env: "",
+        auto_fallback: true,
+        api_key: ollamaUrl,
+        model: ollamaModel,
+        auth_method: "api_key",
+        ollama_url: ollamaUrl,
+        ollama_model: ollamaModel,
       };
     } else {
       // codex
@@ -399,10 +428,12 @@ export function AgentSettings({
         binary_path: "",
         args: "",
         env: "",
-        auto_fallback: autoFallback,
+        auto_fallback: true,
         api_key: codexApiKey,
         model: codexModel,
         auth_method: "api_key",
+        ollama_url: "",
+        ollama_model: "",
       };
     }
 
@@ -457,6 +488,33 @@ export function AgentSettings({
     }
   }
 
+  // Fetch Ollama models when the Ollama provider tab is selected
+  const fetchOllamaModels = useCallback(async (url?: string) => {
+    setOllamaLoading(true);
+    setOllamaError(null);
+    try {
+      const models = await invoke<{ name: string; size: number }[]>(
+        "ollama_list_models",
+        { baseUrl: url || ollamaUrl },
+      );
+      setOllamaModels(models);
+      // Auto-select first model if none selected
+      if (!ollamaModel && models.length > 0) {
+        setOllamaModel(models[0].name);
+      }
+    } catch (e) {
+      setOllamaError(String(e));
+      setOllamaModels([]);
+    }
+    setOllamaLoading(false);
+  }, [ollamaUrl, ollamaModel]);
+
+  useEffect(() => {
+    if (selectedProvider === "ollama") {
+      fetchOllamaModels();
+    }
+  }, [selectedProvider]); // eslint-disable-line react-hooks/exhaustive-deps
+
   const selectedAgent = agents.find((a) => a.id === selectedAgentId);
   const canConnect =
     selectedProvider === "acp"
@@ -465,7 +523,9 @@ export function AgentSettings({
         ? claudeAuthMethod === "oauth" || !!claudeApiKey
         : selectedProvider === "copilot"
           ? !!copilotToken
-          : !!codexApiKey;
+          : selectedProvider === "ollama"
+            ? !!ollamaModel
+            : !!codexApiKey;
 
   // ── Render sections ──
 
@@ -778,6 +838,67 @@ export function AgentSettings({
     );
   }
 
+  function renderOllamaSettings() {
+    function formatSize(bytes: number): string {
+      const gb = bytes / (1024 * 1024 * 1024);
+      return gb >= 1 ? `${gb.toFixed(1)} GB` : `${(bytes / (1024 * 1024)).toFixed(0)} MB`;
+    }
+
+    return (
+      <div className="provider-settings">
+        <div className="agent-env-row">
+          <label className="agent-env-label">URL:</label>
+          <input
+            type="text"
+            className="agent-env-input"
+            placeholder="http://localhost:11434"
+            value={ollamaUrl}
+            onChange={(e) => setOllamaUrl(e.target.value)}
+            onBlur={() => fetchOllamaModels(ollamaUrl)}
+          />
+        </div>
+        <div className="agent-env-row">
+          <label className="agent-env-label">Model:</label>
+          <div style={{ display: "flex", gap: "6px", flex: 1 }}>
+            <select
+              className="config-option-select"
+              style={{ flex: 1 }}
+              value={ollamaModel}
+              onChange={(e) => setOllamaModel(e.target.value)}
+              disabled={ollamaLoading || ollamaModels.length === 0}
+            >
+              {ollamaModels.length === 0 && !ollamaLoading && (
+                <option value="">No models found</option>
+              )}
+              {ollamaLoading && <option value="">Loading...</option>}
+              {ollamaModels.map((m) => (
+                <option key={m.name} value={m.name}>
+                  {m.name} ({formatSize(m.size)})
+                </option>
+              ))}
+            </select>
+            <button
+              className="settings-btn settings-btn-primary"
+              style={{ padding: "2px 8px", fontSize: "11px", whiteSpace: "nowrap" }}
+              onClick={() => fetchOllamaModels()}
+              disabled={ollamaLoading}
+            >
+              {ollamaLoading ? "..." : "Refresh"}
+            </button>
+          </div>
+        </div>
+        {ollamaError && (
+          <div className="text-[11px] text-red-400 px-1 mt-1">
+            {ollamaError}
+          </div>
+        )}
+        <div className="text-[11px] text-white/40 px-1 mt-1">
+          Runs locally via Ollama. No API key needed. Make sure Ollama is running.
+        </div>
+      </div>
+    );
+  }
+
   function renderCodexSettings() {
     return (
       <div className="provider-settings">
@@ -815,19 +936,20 @@ export function AgentSettings({
 
         {/* Provider selector */}
         <div className="provider-selector">
-          {(["acp", "claude", "copilot", "codex"] as ProviderKind[]).map((p) => (
+          {(["ollama", "acp", "claude", "copilot", "codex"] as ProviderKind[]).map((p) => (
             <button
               key={p}
               className={`provider-tab ${selectedProvider === p ? "provider-tab-active" : ""}`}
               onClick={() => setSelectedProvider(p)}
               disabled={status === "connected" || status === "connecting"}
             >
-              {p === "acp" ? "ACP" : p === "claude" ? "Claude" : p === "copilot" ? "Copilot" : "Codex"}
+              {p === "ollama" ? "Ollama" : p === "acp" ? "ACP" : p === "claude" ? "Claude" : p === "copilot" ? "Copilot" : "Codex"}
             </button>
           ))}
         </div>
 
         {/* Provider-specific settings */}
+        {selectedProvider === "ollama" && renderOllamaSettings()}
         {selectedProvider === "acp" && renderAcpSettings()}
         {selectedProvider === "claude" && renderClaudeSettings()}
         {selectedProvider === "copilot" && renderCopilotSettings()}
@@ -878,15 +1000,6 @@ export function AgentSettings({
         )}
 
         <div className="settings-footer">
-          <label className="settings-label">
-            <input
-              type="checkbox"
-              checked={autoFallback}
-              onChange={(e) => setAutoFallback(e.target.checked)}
-            />
-            Auto-fallback to agent on zero results
-          </label>
-
           <div className="settings-actions">
             {status === "connected" ? (
               <button

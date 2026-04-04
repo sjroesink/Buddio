@@ -40,6 +40,7 @@ impl AgentManager {
             ProviderKind::Claude => Box::new(SidecarProvider::new("Claude")),
             ProviderKind::Copilot => Box::new(SidecarProvider::new("Copilot")),
             ProviderKind::Codex => Box::new(SidecarProvider::new("Codex")),
+            ProviderKind::Ollama => Box::new(SidecarProvider::new("Ollama")),
         };
 
         provider.connect(&config, app).await?;

@@ -168,7 +168,7 @@ impl AgentProvider for SidecarProvider {
         // Find Node.js
         let node_bin = find_node().ok_or_else(|| {
             self.status = AgentStatus::Error;
-            "Node.js is required for Claude/Copilot providers but was not found on PATH. \
+            "Node.js is required for this provider but was not found on PATH. \
              Please install Node.js (https://nodejs.org/) and try again."
                 .to_string()
         })?;
@@ -188,6 +188,11 @@ impl AgentProvider for SidecarProvider {
         cmd.stdin(std::process::Stdio::piped())
             .stdout(std::process::Stdio::piped())
             .stderr(std::process::Stdio::inherit());
+        #[cfg(target_os = "windows")]
+        {
+            const CREATE_NO_WINDOW: u32 = 0x08000000;
+            cmd.creation_flags(CREATE_NO_WINDOW);
+        }
 
         let mut child = cmd
             .spawn()

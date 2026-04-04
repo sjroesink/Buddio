@@ -4,6 +4,7 @@ import type { SidecarProvider } from "./providers/base.js";
 import { ClaudeProvider } from "./providers/claude.js";
 import { CopilotProvider } from "./providers/copilot.js";
 import { CodexProvider } from "./providers/codex.js";
+import { OllamaProvider } from "./providers/ollama.js";
 import { McpConnection } from "./mcp.js";
 
 // --- JSON lines I/O ---
@@ -58,6 +59,8 @@ async function handleMessage(msg: IncomingMessage): Promise<void> {
         provider = new CopilotProvider();
       } else if (msg.provider === "codex") {
         provider = new CodexProvider();
+      } else if (msg.provider === "ollama") {
+        provider = new OllamaProvider();
       } else {
         send({ type: "error", message: `Unknown provider: ${msg.provider}` });
         return;

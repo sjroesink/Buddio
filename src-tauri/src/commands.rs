@@ -1,4 +1,5 @@
 use chrono::Timelike;
+use serde::Deserialize;
 use golaunch_core::{
     CommandHistory, CommandSuggestion, Conversation, ConversationMessage, ConversationWithPreview,
     Database, Item, Memory, NewCommandHistory, NewConversation, NewConversationMessage, NewItem,
@@ -29,6 +30,12 @@ pub fn search_items(query: String) -> Result<Vec<Item>, String> {
     } else {
         db.search_items(&query)
     }
+}
+
+#[tauri::command]
+pub fn delete_item(id: String) -> Result<bool, String> {
+    let db = Database::new()?;
+    db.remove_item(&id)
 }
 
 #[tauri::command]
@@ -237,6 +244,9 @@ pub fn save_agent_config(config: AgentConfig) -> Result<(), String> {
     db.set_setting("agent.claude.api_key", &config.api_key)?;
     db.set_setting("agent.claude.model", &config.model)?;
     db.set_setting("agent.claude.auth_method", &config.auth_method)?;
+    // Ollama settings
+    db.set_setting("agent.ollama.url", &config.ollama_url)?;
+    db.set_setting("agent.ollama.model", &config.ollama_model)?;
     Ok(())
 }
 
@@ -244,7 +254,7 @@ fn load_agent_config(db: &Database) -> Result<AgentConfig, String> {
     Ok(AgentConfig {
         provider: db
             .get_setting("agent.provider")?
-            .unwrap_or_else(|| "acp".to_string()),
+            .unwrap_or_else(|| "ollama".to_string()),
         source: db.get_setting("acp.source")?.unwrap_or_default(),
         agent_id: db.get_setting("acp.agent_id")?.unwrap_or_default(),
         binary_path: db.get_setting("acp.binary_path")?.unwrap_or_default(),
@@ -263,7 +273,66 @@ fn load_agent_config(db: &Database) -> Result<AgentConfig, String> {
         auth_method: db
             .get_setting("agent.claude.auth_method")?
             .unwrap_or_else(|| "oauth".to_string()),
+        ollama_url: db
+            .get_setting("agent.ollama.url")?
+            .unwrap_or_else(|| "http://localhost:11434".to_string()),
+        ollama_model: db
+            .get_setting("agent.ollama.model")?
+            .unwrap_or_default(),
     })
+}
+
+#[derive(Debug, Clone, serde::Serialize, serde::Deserialize)]
+pub struct OllamaModel {
+    pub name: String,
+    pub size: u64,
+    pub modified_at: String,
+}
+
+#[tauri::command]
+pub async fn ollama_list_models(base_url: Option<String>) -> Result<Vec<OllamaModel>, String> {
+    let url = base_url
+        .unwrap_or_else(|| "http://localhost:11434".to_string());
+    let url = format!("{}/api/tags", url.trim_end_matches('/'));
+
+    let client = reqwest::Client::new();
+    let resp = client
+        .get(&url)
+        .timeout(std::time::Duration::from_secs(5))
+        .send()
+        .await
+        .map_err(|e| format!("Cannot connect to Ollama: {e}"))?;
+
+    if !resp.status().is_success() {
+        return Err(format!("Ollama API error: HTTP {}", resp.status()));
+    }
+
+    #[derive(Deserialize)]
+    struct TagsResponse {
+        models: Vec<TagModel>,
+    }
+
+    #[derive(Deserialize)]
+    struct TagModel {
+        name: String,
+        size: u64,
+        modified_at: String,
+    }
+
+    let tags: TagsResponse = resp
+        .json()
+        .await
+        .map_err(|e| format!("Failed to parse Ollama response: {e}"))?;
+
+    Ok(tags
+        .models
+        .into_iter()
+        .map(|m| OllamaModel {
+            name: m.name,
+            size: m.size,
+            modified_at: m.modified_at,
+        })
+        .collect())
 }
 
 // --- Command History commands ---
@@ -585,10 +654,15 @@ pub async fn acp_install_agent(agent: RegistryAgent) -> Result<String, String> {
             let package = agent.distribution_detail.clone();
             tokio::task::spawn_blocking(move || {
                 #[cfg(target_os = "windows")]
-                let output = std::process::Command::new("powershell")
-                    .args(["-NoProfile", "-Command", &format!("npm install -g {}", package)])
-                    .output()
-                    .map_err(|e| format!("Failed to run npm install: {e}"))?;
+                let output = {
+                    use std::os::windows::process::CommandExt;
+                    const CREATE_NO_WINDOW: u32 = 0x08000000;
+                    std::process::Command::new("powershell")
+                        .args(["-NoProfile", "-Command", &format!("npm install -g {}", package)])
+                        .creation_flags(CREATE_NO_WINDOW)
+                        .output()
+                        .map_err(|e| format!("Failed to run npm install: {e}"))?
+                };
 
                 #[cfg(not(target_os = "windows"))]
                 let output = std::process::Command::new("npm")
@@ -786,9 +860,12 @@ pub fn execute_slash_command(name: String, args: String) -> Result<String, Strin
 
     #[cfg(target_os = "windows")]
     let output = {
+        use std::os::windows::process::CommandExt;
+        const CREATE_NO_WINDOW: u32 = 0x08000000;
         std::process::Command::new("powershell")
             .args(["-ExecutionPolicy", "Bypass", "-File", &cmd.script_path])
             .args(args.split_whitespace().collect::<Vec<&str>>())
+            .creation_flags(CREATE_NO_WINDOW)
             .output()
             .map_err(|e| format!("Failed to execute script: {e}"))?
     };

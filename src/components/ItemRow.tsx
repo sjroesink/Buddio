@@ -5,6 +5,7 @@ interface ItemRowProps {
   isSelected: boolean;
   onHover: () => void;
   onClick: () => void;
+  onContextMenu: (e: React.MouseEvent) => void;
 }
 
 const ACTION_TYPE_ICONS: Record<string, string> = {
@@ -13,7 +14,7 @@ const ACTION_TYPE_ICONS: Record<string, string> = {
   script: "📜",
 };
 
-function ItemRow({ item, isSelected, onHover, onClick }: ItemRowProps) {
+function ItemRow({ item, isSelected, onHover, onClick, onContextMenu }: ItemRowProps) {
   const icon = item.icon || ACTION_TYPE_ICONS[item.action_type] || "📦";
 
   return (
@@ -21,6 +22,7 @@ function ItemRow({ item, isSelected, onHover, onClick }: ItemRowProps) {
       data-testid={`item-row-${item.id}`}
       onMouseEnter={onHover}
       onClick={onClick}
+      onContextMenu={onContextMenu}
       className={`window-no-drag flex items-center px-4 py-2.5 mx-1 rounded-lg cursor-pointer transition-all duration-100 ${
         isSelected
           ? "bg-launcher-selected/80 border border-launcher-border/40"

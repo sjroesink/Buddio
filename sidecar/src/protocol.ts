@@ -2,7 +2,7 @@
 
 export interface InitMessage {
   type: "init";
-  provider: "claude" | "copilot" | "codex";
+  provider: "claude" | "copilot" | "codex" | "ollama";
   config: {
     api_key: string;
     model: string;

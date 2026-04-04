@@ -108,8 +108,9 @@ export function useUpdateChecker(options: UseUpdateCheckerOptions = {}) {
     setDismissed(true);
   }, []);
 
-  // Startup check + interval
+  // Startup check + interval (skip in dev mode)
   useEffect(() => {
+    if (import.meta.env.DEV) return;
     const startupTimer = setTimeout(checkForUpdate, STARTUP_DELAY);
     const interval = setInterval(checkForUpdate, CHECK_INTERVAL);
     return () => {
